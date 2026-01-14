@@ -1,24 +1,21 @@
-// src/logging/eventLogger.js
+import { SESSION_ID } from "./session";
 
-let rawLogs = [];
-let lastLogTime = 0;
+const logs = [];
 
-// 30 Hz sampling
-const LOG_INTERVAL = 33;
+export const logEvent = ({
+  type,
+  flowId,
+  stepId,
+  value = {},
+}) => {
+  logs.push({
+    session_id: SESSION_ID,
+    flow_id: flowId,
+    step_id: stepId,
+    event_type: type,
+    timestamp: Date.now(),
+    ...value
+  });
+};
 
-export function logEvent(event) {
-  const now = performance.now();
-
-  if (now - lastLogTime < LOG_INTERVAL) return;
-
-  lastLogTime = now;
-  rawLogs.push(event);
-}
-
-export function getRawLogs() {
-  return rawLogs;
-}
-
-export function clearLogs() {
-  rawLogs = [];
-}
+export const getLogs = () => logs;

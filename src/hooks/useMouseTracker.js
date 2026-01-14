@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { euclideanDistance, curvature } from "../utils/metrics";
 import { logEvent } from "../logging/eventLogger";
 
-
-export default function useMouseTracker() {
+export default function useMouseTracker(flowId, stepId) {
   const startTime = useRef(performance.now());
   const prev = useRef(null);
   const prevPrev = useRef(null);
@@ -15,7 +14,7 @@ export default function useMouseTracker() {
     accelerations: [],
     jerks: [],
     curvatures: [],
-    actionTimes: []
+    actionTimes: [],
   });
 
   const [metrics, setMetrics] = useState({
@@ -23,7 +22,7 @@ export default function useMouseTracker() {
     s_total_distance: 0,
     s_num_actions: 0,
     s_num_clicks: 0,
-      s_num_misclicks: 0, 
+    s_num_misclicks: 0,
     s_mean_time_per_action: 0,
     s_vel_mean: 0,
     s_vel_std: 0,
@@ -31,120 +30,109 @@ export default function useMouseTracker() {
     s_accel_std: 0,
     s_curve_mean: 0,
     s_curve_std: 0,
-    s_jerk_mean: 0
+    s_jerk_mean: 0,
   });
 
-  function updateStats(arr) {
+  function stats(arr) {
+    if (!arr.length) return { mean: 0, std: 0 };
     const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
     const std = Math.sqrt(
-      arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length
+      arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length
     );
     return { mean, std };
   }
 
   useEffect(() => {
-        function handleMove(e) {
-    const now = performance.now();
-    const current = { x: e.clientX, y: e.clientY, t: now };
+    function handleMove(e) {
+      const now = performance.now();
+      const current = { x: e.clientX, y: e.clientY, t: now };
 
-    let vel = 0;
-    let accel = 0;
-    let jerk = 0;
+      let vel = 0,
+        accel = 0,
+        jerk = 0;
 
-    if (prev.current) {
+      if (prev.current) {
         const dt = (now - prev.current.t) / 1000;
-
         if (dt > 0) {
-        const dist = euclideanDistance(prev.current, current);
-        vel = dist / dt;
+          const dist = euclideanDistance(prev.current, current);
+          vel = dist / dt;
 
-        accel =
-            accum.current.velocities.length > 0
+          accel = accum.current.velocities.length
             ? (vel - accum.current.velocities.at(-1)) / dt
             : 0;
 
-        jerk =
-            accum.current.accelerations.length > 0
+          jerk = accum.current.accelerations.length
             ? (accel - accum.current.accelerations.at(-1)) / dt
             : 0;
 
-        accum.current.totalDistance += dist;
-        accum.current.velocities.push(vel);
-        accum.current.accelerations.push(accel);
-        accum.current.jerks.push(jerk);
+          accum.current.totalDistance += dist;
+          accum.current.velocities.push(vel);
+          accum.current.accelerations.push(accel);
+          accum.current.jerks.push(jerk);
+          accum.current.actionTimes.push(dt);
+          accum.current.numActions += 1;
 
-        if (prevPrev.current) {
+          if (prevPrev.current) {
             accum.current.curvatures.push(
-            curvature(prevPrev.current, prev.current, current)
+              curvature(prevPrev.current, prev.current, current)
             );
+          }
         }
+      }
 
-        accum.current.numActions += 1;
-        accum.current.actionTimes.push(dt);
-        }
-    }
+      // LOG: derived movement signal only
+      logEvent({
+        type: "mouse_move",
+        flowId,
+        stepId,
+        value: { vel, accel, jerk },
+      });
 
-    // ✅ LOG EVENT (30 Hz sampling handled in logger)
-    logEvent({
-        t: now,
-        type: "mousemove",
-        x: current.x,
-        y: current.y,
-        velocity: vel,
-        acceleration: accel,
-        jerk
-    });
+      prevPrev.current = prev.current;
+      prev.current = current;
 
-    prevPrev.current = prev.current;
-    prev.current = current;
+      const velStats = stats(accum.current.velocities);
+      const accStats = stats(accum.current.accelerations);
+      const curStats = stats(accum.current.curvatures);
 
-    const velStats = updateStats(accum.current.velocities);
-    const accStats = updateStats(accum.current.accelerations);
-    const curStats = updateStats(accum.current.curvatures);
-
-    setMetrics(prev => ({
-        ...prev,
+      setMetrics((m) => ({
+        ...m,
         s_session_duration: (now - startTime.current) / 1000,
         s_total_distance: accum.current.totalDistance,
         s_num_actions: accum.current.numActions,
         s_mean_time_per_action:
-        accum.current.actionTimes.reduce((a, b) => a + b, 0) /
-        (accum.current.actionTimes.length || 1),
-        s_vel_mean: velStats.mean || 0,
-        s_vel_std: velStats.std || 0,
-        s_accel_mean: accStats.mean || 0,
-        s_accel_std: accStats.std || 0,
-        s_curve_mean: curStats.mean || 0,
-        s_curve_std: curStats.std || 0,
+          accum.current.actionTimes.reduce((a, b) => a + b, 0) /
+          (accum.current.actionTimes.length || 1),
+        s_vel_mean: velStats.mean,
+        s_vel_std: velStats.std,
+        s_accel_mean: accStats.mean,
+        s_accel_std: accStats.std,
+        s_curve_mean: curStats.mean,
+        s_curve_std: curStats.std,
         s_jerk_mean:
-        accum.current.jerks.reduce((a, b) => a + b, 0) /
-        (accum.current.jerks.length || 1)
-    }));
+          accum.current.jerks.reduce((a, b) => a + b, 0) /
+          (accum.current.jerks.length || 1),
+      }));
     }
 
+    function handleClick(e) {
+      const isMisclick = !e.target.closest(
+        "button, a, input, select, textarea"
+      );
 
-        function handleClick(e) {
-        const isMisclick = !e.target.closest(
-            "button, a, input, select, textarea"
-        );
+      logEvent({
+        type: "click",
+        flowId,
+        stepId,
+        value: { isMisclick },
+      });
 
-        logEvent({
-            t: performance.now(),
-            type: "click",
-            x: e.clientX,
-            y: e.clientY,
-            isMisclick
-        });
-
-        setMetrics(prev => ({
-            ...prev,
-            s_num_clicks: prev.s_num_clicks + 1,
-            s_num_misclicks: prev.s_num_misclicks + (isMisclick ? 1 : 0)
-        }));
-        }
-
-
-
+      setMetrics((m) => ({
+        ...m,
+        s_num_clicks: m.s_num_clicks + 1,
+        s_num_misclicks: m.s_num_misclicks + (isMisclick ? 1 : 0),
+      }));
+    }
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("click", handleClick);
@@ -153,7 +141,7 @@ export default function useMouseTracker() {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("click", handleClick);
     };
-  }, []);
+  }, [flowId, stepId]);
 
   return metrics;
 }
