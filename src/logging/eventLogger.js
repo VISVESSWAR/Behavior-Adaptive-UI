@@ -1,21 +1,20 @@
-import { SESSION_ID } from "./session";
+const KEY = "behavior_logs";
 
-const logs = [];
+export function logEvent(e) {
+  const logs = JSON.parse(localStorage.getItem(KEY) || "[]");
 
-export const logEvent = ({
-  type,
-  flowId,
-  stepId,
-  value = {},
-}) => {
   logs.push({
-    session_id: SESSION_ID,
-    flow_id: flowId,
-    step_id: stepId,
-    event_type: type,
-    timestamp: Date.now(),
-    ...value
+    ts: Date.now(),
+    ...e
   });
-};
 
-export const getLogs = () => logs;
+  localStorage.setItem(KEY, JSON.stringify(logs));
+}
+
+export function getLogs() {
+  return JSON.parse(localStorage.getItem(KEY) || "[]");
+}
+
+export function clearLogs() {
+  localStorage.removeItem(KEY);
+}

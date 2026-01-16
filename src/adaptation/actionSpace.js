@@ -1,4 +1,4 @@
-export const ACTIONS = {
+export const ACTION_SPACE = {
   0: "noop",
 
   1: "button_up",

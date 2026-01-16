@@ -1,69 +1,123 @@
-import useMouseTracker from "./hooks/useMouseTracker";
-import useIdleTimer from "./hooks/useIdeTimer";
-import useScrollDepth from "./hooks/useScrollDepth";
-import HomePage from "./pages/Home";
-import { defaultUISchema } from "./adaptation/uiSchema";
-import "./style.css";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
-function fmt(value, digits = 2) {
-  return typeof value === "number" ? value.toFixed(digits) : "0.00";
+import useMouseTracker from "./hooks/useMouseTracker";
+import useIdleTimer from "./hooks/useIdleTimer";
+import useScrollDepth from "./hooks/useScrollDepth";
+
+import HomePage from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Transaction from "./pages/Transaction";
+import Recovery from "./pages/Recovery";
+import Dashboard from "./pages/Dashboard";
+
+import { UIProvider } from "./adaptation/UIContext";
+import "./index.css";
+
+function fmt(v, d = 2) {
+  return typeof v === "number" ? v.toFixed(d) : "0.00";
+}
+
+function AppHeader() {
+  const metrics = useMouseTracker("global", "app");
+  const idleTime = useIdleTimer("global", "app");
+  const scrollDepth = useScrollDepth("global", "app");
+
+  return (
+    <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Adaptive UI Dashboard
+            </h1>
+            <p className="text-sm text-gray-600">
+              Behavior-aware user interface system
+            </p>
+          </div>
+        </div>
+
+        {/* === NAVIGATION === */}
+        <nav className="flex gap-4 flex-wrap">
+          <Link
+            to="/"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Home
+          </Link>
+          <Link
+            to="/login"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Login
+          </Link>
+          <Link
+            to="/register"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Register
+          </Link>
+          <Link
+            to="/transaction"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Transaction
+          </Link>
+          <Link
+            to="/recovery"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Recovery
+          </Link>
+          <Link
+            to="/dashboard"
+            className="adaptive-element px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg font-bold"
+          >
+            Dashboard
+          </Link>
+        </nav>
+
+        {/* === METRICS SNAPSHOT === */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-xs">
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-gray-600">Duration</p>
+            <p className="font-semibold">{fmt(metrics.s_session_duration)}s</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-gray-600">Distance</p>
+            <p className="font-semibold">{fmt(metrics.s_total_distance)}</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-gray-600">Clicks</p>
+            <p className="font-semibold">{metrics.s_num_clicks || 0}</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-gray-600">Idle Time</p>
+            <p className="font-semibold">{fmt(idleTime)}s</p>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }
 
 export default function App() {
-  const metrics = useMouseTracker();
-  const idleTime = useIdleTimer();
-  const scrollDepth = useScrollDepth();
-
   return (
-    <>
-    <div className="container">
-      <h2>Behavior Metrics Dashboard</h2>
-
-      {/* === TEST BUTTON FOR MISCLICKS === */}
-      <button
-        style={{
-          padding: "12px 20px",
-          marginBottom: "20px",
-          fontSize: "16px",
-          cursor: "pointer"
-        }}
-        onClick={() => {
-          console.log("Valid click registered");
-        }}
-      >
-        Test Button (Valid Click)
-      </button>
-
-      <p>Session Duration: {fmt(metrics.s_session_duration)} s</p>
-      <p>Total Distance: {fmt(metrics.s_total_distance)}</p>
-      <p>Number of Actions: {metrics.s_num_actions || 0}</p>
-      <p>Number of Clicks: {metrics.s_num_clicks || 0}</p>
-      <p>Mean Time per Action: {fmt(metrics.s_mean_time_per_action)} s</p>
-
-      <p>Velocity Mean: {fmt(metrics.s_vel_mean)}</p>
-      <p>Velocity Std: {fmt(metrics.s_vel_std)}</p>
-
-      <p>Acceleration Mean: {fmt(metrics.s_accel_mean)}</p>
-      <p>Acceleration Std: {fmt(metrics.s_accel_std)}</p>
-
-      <p>Curvature Mean: {fmt(metrics.s_curve_mean)}</p>
-      <p>Curvature Std: {fmt(metrics.s_curve_std)}</p>
-
-      <p>Jerk Mean: {fmt(metrics.s_jerk_mean)}</p>
-
-      <p>Idle Time: {fmt(idleTime)} s</p>
-      <p>Scroll Depth: {fmt(scrollDepth * 100, 1)} %</p>
-
-      <p>
-        <strong>Misclicks:</strong> {metrics.s_num_misclicks || 0}
-      </p>
-
-      <p style={{ fontSize: "12px", color: "#666" }}>
-        Tip: Click outside the button to generate misclicks.
-      </p>
-    </div>
-    <HomePage uiSchema={defaultUISchema} />
-    </>
-    
+    <Router>
+      <UIProvider>
+        <AppHeader />
+        <main className="min-h-screen bg-gray-50">
+          {/* === ROUTES === */}
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/transaction" element={<Transaction />} />
+            <Route path="/recovery" element={<Recovery />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Routes>
+        </main>
+      </UIProvider>
+    </Router>
   );
 }
