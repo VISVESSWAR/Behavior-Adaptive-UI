@@ -13,5 +13,5 @@ export const ACTION_SPACE = {
   7: "spacing_up",
   8: "spacing_down",
 
-  9: "enable_tooltips"
+  9: "enable_tooltips",
 };

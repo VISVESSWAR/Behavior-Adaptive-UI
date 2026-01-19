@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLabel,
+  AdaptiveLink,
+} from "../components/AdaptiveText";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import useScrollDepth from "../hooks/useScrollDepth";
@@ -56,15 +62,19 @@ export default function Transaction() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <AdaptiveHeading level={1} className="text-gray-900 mb-2">
           Transaction / Booking
-        </h1>
-        <p className="text-gray-600">Complete a transaction securely</p>
+        </AdaptiveHeading>
+        <AdaptiveParagraph className="text-gray-600">
+          Complete a transaction securely
+        </AdaptiveParagraph>
       </div>
 
       {stepId === "select_service" && (
         <div>
-          <p className="text-gray-700 font-medium mb-6">Choose a service:</p>
+          <AdaptiveParagraph className="text-gray-700 mb-6">
+            Choose a service:
+          </AdaptiveParagraph>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {SERVICES.map((service) => (
               <button
@@ -73,9 +83,9 @@ export default function Transaction() {
                 className="card-base text-center hover:border-blue-500 hover:border-2 transform hover:scale-105"
               >
                 <div className="text-4xl mb-3">{service.icon}</div>
-                <p className="font-semibold text-gray-900 mb-2">
+                <AdaptiveHeading level={3} className="text-gray-900 mb-2">
                   {service.name}
-                </p>
+                </AdaptiveHeading>
                 <p className="text-blue-600 font-bold text-lg">
                   {service.price}
                 </p>
@@ -84,12 +94,13 @@ export default function Transaction() {
           </div>
 
           <div className="flex gap-4">
-            <Link
+            <AdaptiveLink
+              as={Link}
               to="/dashboard"
-              className="adaptive-element px-6 py-3 bg-gray-400 text-white font-medium rounded-lg hover:bg-gray-500 shadow-sm hover:shadow-md"
+              className="adaptive-element px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 shadow-sm hover:shadow-md"
             >
               Cancel
-            </Link>
+            </AdaptiveLink>
           </div>
         </div>
       )}
@@ -97,25 +108,25 @@ export default function Transaction() {
       {stepId === "confirm_payment" && selectedService && (
         <div className="max-w-md mx-auto">
           <div className="card-base mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
+            <AdaptiveHeading level={2} className="text-gray-900 mb-6">
               Review Transaction
-            </h2>
+            </AdaptiveHeading>
 
             <div className="space-y-4 mb-8 pb-8 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Service</span>
+                <AdaptiveLabel className="text-gray-600">Service</AdaptiveLabel>
                 <span className="font-semibold text-gray-900">
                   {selectedService.name}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Amount</span>
+                <AdaptiveLabel className="text-gray-600">Amount</AdaptiveLabel>
                 <span className="font-semibold text-gray-900">
                   {selectedService.price}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Status</span>
+                <AdaptiveLabel className="text-gray-600">Status</AdaptiveLabel>
                 <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
                   Pending
                 </span>
@@ -123,9 +134,9 @@ export default function Transaction() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Recipient / Details (optional)
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 type="text"
                 placeholder="Enter recipient details"
@@ -157,25 +168,27 @@ export default function Transaction() {
           <div className="inline-block">
             <div className="w-16 h-16 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
           </div>
-          <p className="text-gray-900 font-bold text-lg mb-2">
+          <AdaptiveHeading level={3} className="text-gray-900 mb-2">
             Processing Payment
-          </p>
-          <p className="text-gray-600">
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600">
             Please wait while we process your transaction...
-          </p>
+          </AdaptiveParagraph>
         </div>
       )}
 
       {stepId === "success" && (
         <div className="card-base max-w-md mx-auto text-center py-12">
           <div className="text-6xl mb-4">✅</div>
-          <p className="text-gray-900 font-bold text-2xl mb-2">
+          <AdaptiveHeading level={2} className="text-gray-900 mb-2">
             Payment Successful!
-          </p>
-          <p className="text-gray-600 mb-2">
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600 mb-2">
             Your transaction has been completed
-          </p>
-          <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
+          </AdaptiveParagraph>
+          <AdaptiveParagraph className="text-gray-500">
+            Redirecting to dashboard...
+          </AdaptiveParagraph>
         </div>
       )}
     </div>

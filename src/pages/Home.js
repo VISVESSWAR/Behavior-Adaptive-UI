@@ -4,6 +4,11 @@ import useIdleTimer from "../hooks/useIdleTimer";
 import useScrollDepth from "../hooks/useScrollDepth";
 import { useEffect } from "react";
 import { logEvent } from "../logging/eventLogger";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLink,
+} from "../components/AdaptiveText";
 
 export default function HomePage() {
   const flowId = "home";
@@ -26,27 +31,29 @@ export default function HomePage() {
       {/* === HERO SECTION === */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
+          <AdaptiveHeading level={1} className="text-gray-900 mb-4">
             Adaptive UI System
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600 mb-8 max-w-2xl mx-auto">
             Experience a user interface that adapts to your behavior. Our system
             learns and adjusts UI elements based on how you interact, providing
             the perfect experience for every user type.
-          </p>
+          </AdaptiveParagraph>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
+            <AdaptiveLink
+              as={Link}
               to="/login"
-              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               Get Started
-            </Link>
-            <Link
+            </AdaptiveLink>
+            <AdaptiveLink
+              as={Link}
               to="/dashboard"
-              className="adaptive-element inline-block px-8 py-4 bg-white text-blue-600 font-bold rounded-lg border-2 border-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="adaptive-element inline-block px-8 py-4 bg-white text-blue-600 rounded-lg border-2 border-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               View Dashboard
-            </Link>
+            </AdaptiveLink>
           </div>
         </div>
       </section>
@@ -54,9 +61,12 @@ export default function HomePage() {
       {/* === FEATURES SECTION === */}
       <section className="bg-white py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
+          <AdaptiveHeading
+            level={2}
+            className="text-gray-900 text-center mb-12"
+          >
             Key Features
-          </h2>
+          </AdaptiveHeading>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
@@ -98,10 +108,12 @@ export default function HomePage() {
             ].map((feature, idx) => (
               <div key={idx} className="card-base">
                 <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <AdaptiveHeading level={3} className="text-gray-900 mb-2">
                   {feature.title}
-                </h3>
-                <p className="text-gray-600">{feature.description}</p>
+                </AdaptiveHeading>
+                <AdaptiveParagraph className="text-gray-600">
+                  {feature.description}
+                </AdaptiveParagraph>
               </div>
             ))}
           </div>
@@ -111,9 +123,12 @@ export default function HomePage() {
       {/* === FLOWS SECTION === */}
       <section className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
+          <AdaptiveHeading
+            level={2}
+            className="text-gray-900 text-center mb-12"
+          >
             Available Flows
-          </h2>
+          </AdaptiveHeading>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               { name: "Home", path: "/", icon: "🏠", color: "blue" },
@@ -132,14 +147,17 @@ export default function HomePage() {
               },
               { name: "Recovery", path: "/recovery", icon: "🔑", color: "red" },
             ].map((flow, idx) => (
-              <Link
+              <AdaptiveLink
                 key={idx}
+                as={Link}
                 to={flow.path}
                 className="card-base text-center hover:border-gray-400 hover:border-2 transform hover:scale-105"
               >
                 <div className="text-5xl mb-4">{flow.icon}</div>
-                <h3 className="font-bold text-gray-900">{flow.name}</h3>
-              </Link>
+                <AdaptiveHeading level={3} className="text-gray-900">
+                  {flow.name}
+                </AdaptiveHeading>
+              </AdaptiveLink>
             ))}
           </div>
         </div>
@@ -148,9 +166,12 @@ export default function HomePage() {
       {/* === HOW IT WORKS === */}
       <section className="bg-white py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
+          <AdaptiveHeading
+            level={2}
+            className="text-gray-900 text-center mb-12"
+          >
             How It Works
-          </h2>
+          </AdaptiveHeading>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[
               {
@@ -182,8 +203,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">
                   {item.step}
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600 text-sm">{item.description}</p>
+                <AdaptiveHeading level={3} className="text-gray-900 mb-2">
+                  {item.title}
+                </AdaptiveHeading>
+                <AdaptiveParagraph className="text-gray-600">
+                  {item.description}
+                </AdaptiveParagraph>
               </div>
             ))}
           </div>
@@ -193,31 +218,34 @@ export default function HomePage() {
       {/* === CTA SECTION === */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="card-base text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <AdaptiveHeading level={2} className="text-gray-900 mb-4">
             Ready to Experience Adaptive UI?
-          </h2>
-          <p className="text-gray-600 mb-8">
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600 mb-8">
             Start exploring our system and see how it adapts to your needs
-          </p>
+          </AdaptiveParagraph>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
+            <AdaptiveLink
+              as={Link}
               to="/login"
-              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl"
             >
               Sign In
-            </Link>
-            <Link
+            </AdaptiveLink>
+            <AdaptiveLink
+              as={Link}
               to="/register"
-              className="adaptive-element inline-block px-8 py-4 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-lg hover:shadow-xl"
             >
               Create Account
-            </Link>
-            <Link
+            </AdaptiveLink>
+            <AdaptiveLink
+              as={Link}
               to="/dashboard"
-              className="adaptive-element inline-block px-8 py-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-lg hover:shadow-xl"
             >
               View Analytics
-            </Link>
+            </AdaptiveLink>
           </div>
         </div>
       </section>

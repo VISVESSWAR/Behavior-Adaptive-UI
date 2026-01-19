@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLabel,
+  AdaptiveLink,
+} from "../components/AdaptiveText";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import useScrollDepth from "../hooks/useScrollDepth";
@@ -50,18 +56,20 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="card-base text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <AdaptiveHeading level={1} className="text-gray-900 mb-2">
             Create Account
-          </h1>
-          <p className="text-gray-600">Join us today</p>
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600">
+            Join us today
+          </AdaptiveParagraph>
         </div>
 
         {stepId === "enter_email" && (
           <div className="card-base space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Email Address
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 type="email"
                 placeholder="you@example.com"
@@ -78,24 +86,25 @@ export default function Register() {
             >
               Continue
             </AdaptiveButton>
-            <p className="text-center text-gray-600 text-sm">
+            <AdaptiveParagraph className="text-center text-gray-600">
               Already have an account?{" "}
-              <Link
+              <AdaptiveLink
+                as={Link}
                 to="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-blue-600 hover:text-blue-700"
               >
                 Sign in
-              </Link>
-            </p>
+              </AdaptiveLink>
+            </AdaptiveParagraph>
           </div>
         )}
 
         {stepId === "set_password" && (
           <div className="card-base space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Password
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 type="password"
                 placeholder="At least 6 characters"
@@ -104,9 +113,9 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Confirm Password
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 type="password"
                 placeholder="Confirm your password"
@@ -114,7 +123,11 @@ export default function Register() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleRegister()}
               />
-              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+              {error && (
+                <AdaptiveParagraph className="text-red-600 mt-2">
+                  {error}
+                </AdaptiveParagraph>
+              )}
             </div>
             <div className="flex gap-3">
               <AdaptiveButton
@@ -135,19 +148,21 @@ export default function Register() {
             <div className="inline-block">
               <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
             </div>
-            <p className="text-gray-600 font-medium">
+            <AdaptiveParagraph className="text-gray-600">
               Creating your account...
-            </p>
+            </AdaptiveParagraph>
           </div>
         )}
 
         {stepId === "success" && (
           <div className="card-base text-center py-12">
             <div className="text-5xl mb-4">✅</div>
-            <p className="text-gray-900 font-bold text-lg mb-2">
+            <AdaptiveHeading level={3} className="text-gray-900 mb-2">
               Account Created!
-            </p>
-            <p className="text-gray-600">Redirecting to login...</p>
+            </AdaptiveHeading>
+            <AdaptiveParagraph className="text-gray-600">
+              Redirecting to login...
+            </AdaptiveParagraph>
           </div>
         )}
       </div>

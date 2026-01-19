@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLabel,
+  AdaptiveLink,
+} from "../components/AdaptiveText";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import useScrollDepth from "../hooks/useScrollDepth";
@@ -48,18 +54,20 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="card-base text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <AdaptiveHeading level={1} className="text-gray-900 mb-2">
             Welcome Back
-          </h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          </AdaptiveHeading>
+          <AdaptiveParagraph className="text-gray-600">
+            Sign in to your account
+          </AdaptiveParagraph>
         </div>
 
         {stepId === "enter_username" && (
           <div className="card-base space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Username
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 placeholder="Enter your username"
                 value={username}
@@ -75,24 +83,25 @@ export default function Login() {
             >
               Continue
             </AdaptiveButton>
-            <p className="text-center text-gray-600 text-sm">
+            <AdaptiveParagraph className="text-center text-gray-600">
               Don't have an account?{" "}
-              <Link
+              <AdaptiveLink
+                as={Link}
                 to="/register"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-blue-600 hover:text-blue-700"
               >
                 Register here
-              </Link>
-            </p>
+              </AdaptiveLink>
+            </AdaptiveParagraph>
           </div>
         )}
 
         {stepId === "enter_password" && (
           <div className="card-base space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AdaptiveLabel className="block text-gray-700 mb-2">
                 Password
-              </label>
+              </AdaptiveLabel>
               <AdaptiveInput
                 type="password"
                 placeholder="Enter your password"
@@ -100,7 +109,11 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleLogin()}
               />
-              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+              {error && (
+                <AdaptiveParagraph className="text-red-600 mt-2">
+                  {error}
+                </AdaptiveParagraph>
+              )}
             </div>
             <div className="flex gap-3">
               <AdaptiveButton
@@ -113,14 +126,15 @@ export default function Login() {
                 Login
               </AdaptiveButton>
             </div>
-            <p className="text-center text-gray-600 text-sm">
-              <Link
+            <AdaptiveParagraph className="text-center text-gray-600">
+              <AdaptiveLink
+                as={Link}
                 to="/recovery"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-blue-600 hover:text-blue-700"
               >
                 Forgot password?
-              </Link>
-            </p>
+              </AdaptiveLink>
+            </AdaptiveParagraph>
           </div>
         )}
 
@@ -129,10 +143,12 @@ export default function Login() {
             <div className="inline-block">
               <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
             </div>
-            <p className="text-gray-600 font-medium">Authenticating...</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <AdaptiveParagraph className="text-gray-600">
+              Authenticating...
+            </AdaptiveParagraph>
+            <AdaptiveParagraph className="text-gray-500 mt-2">
               Redirecting to dashboard
-            </p>
+            </AdaptiveParagraph>
           </div>
         )}
       </div>

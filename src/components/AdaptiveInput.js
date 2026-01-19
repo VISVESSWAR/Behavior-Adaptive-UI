@@ -5,7 +5,7 @@ export default function AdaptiveInput(props) {
 
   return (
     <input
-      className={`input-base w-full p-3 ${ui.input || "text-base"}`}
+      className={`input-base w-full p-3 ${ui.input} ${ui.text}`}
       {...props}
     />
   );

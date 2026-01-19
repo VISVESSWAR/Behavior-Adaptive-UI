@@ -12,6 +12,12 @@ import Recovery from "./pages/Recovery";
 import Dashboard from "./pages/Dashboard";
 
 import { UIProvider } from "./adaptation/UIContext";
+import useUIVariants from "./adaptation/useUIVariants";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLink,
+} from "./components/AdaptiveText";
 import "./index.css";
 
 function fmt(v, d = 2) {
@@ -22,78 +28,97 @@ function AppHeader() {
   const metrics = useMouseTracker("global", "app");
   const idleTime = useIdleTimer("global", "app");
   const scrollDepth = useScrollDepth("global", "app");
+  const ui = useUIVariants();
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-200">
+    <header
+      className={`sticky top-0 z-50 bg-white ${ui.shadow} border-b border-gray-200`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <AdaptiveHeading level={1} className="text-gray-900">
               Adaptive UI Dashboard
-            </h1>
-            <p className="text-sm text-gray-600">
+            </AdaptiveHeading>
+            <AdaptiveParagraph className="text-gray-600">
               Behavior-aware user interface system
-            </p>
+            </AdaptiveParagraph>
           </div>
         </div>
 
         {/* === NAVIGATION === */}
-        <nav className="flex gap-4 flex-wrap">
-          <Link
+        <nav className={`flex ${ui.spacing} flex-wrap`}>
+          <AdaptiveLink
+            as={Link}
             to="/"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
           >
             Home
-          </Link>
-          <Link
+          </AdaptiveLink>
+          <AdaptiveLink
+            as={Link}
             to="/login"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
           >
             Login
-          </Link>
-          <Link
+          </AdaptiveLink>
+          <AdaptiveLink
+            as={Link}
             to="/register"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
           >
             Register
-          </Link>
-          <Link
+          </AdaptiveLink>
+          <AdaptiveLink
+            as={Link}
             to="/transaction"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
           >
             Transaction
-          </Link>
-          <Link
+          </AdaptiveLink>
+          <AdaptiveLink
+            as={Link}
             to="/recovery"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
           >
             Recovery
-          </Link>
-          <Link
+          </AdaptiveLink>
+          <AdaptiveLink
+            as={Link}
             to="/dashboard"
-            className="adaptive-element px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg font-bold"
+            className="adaptive-element px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
           >
             Dashboard
-          </Link>
+          </AdaptiveLink>
         </nav>
 
         {/* === METRICS SNAPSHOT === */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-xs">
-          <div className="bg-gray-50 p-3 rounded">
-            <p className="text-gray-600">Duration</p>
-            <p className="font-semibold">{fmt(metrics.s_session_duration)}s</p>
+        <div
+          className={`mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${ui.spacing} text-xs`}
+        >
+          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+            <AdaptiveParagraph className="text-gray-600">
+              Duration
+            </AdaptiveParagraph>
+            <p className={`${ui.font}`}>{fmt(metrics.s_session_duration)}s</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <p className="text-gray-600">Distance</p>
-            <p className="font-semibold">{fmt(metrics.s_total_distance)}</p>
+          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+            <AdaptiveParagraph className="text-gray-600">
+              Distance
+            </AdaptiveParagraph>
+            <p className={`${ui.font}`}>{fmt(metrics.s_total_distance)}</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <p className="text-gray-600">Clicks</p>
-            <p className="font-semibold">{metrics.s_num_clicks || 0}</p>
+          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+            <AdaptiveParagraph className="text-gray-600">
+              Clicks
+            </AdaptiveParagraph>
+            <p className={`${ui.font}`}>{metrics.s_num_clicks || 0}</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded">
-            <p className="text-gray-600">Idle Time</p>
-            <p className="font-semibold">{fmt(idleTime)}s</p>
+          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+            <AdaptiveParagraph className="text-gray-600">
+              Idle Time
+            </AdaptiveParagraph>
+            <p className={`${ui.font}`}>{fmt(idleTime)}s</p>
           </div>
         </div>
       </div>

@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
+import {
+  AdaptiveHeading,
+  AdaptiveParagraph,
+  AdaptiveLabel,
+  AdaptiveLink,
+} from "../components/AdaptiveText";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import useScrollDepth from "../hooks/useScrollDepth";
@@ -94,19 +100,21 @@ export default function Recovery() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <AdaptiveHeading level={1} className="text-gray-900 mb-2">
           Account Recovery
-        </h1>
-        <p className="text-gray-600">Recover access to your account</p>
+        </AdaptiveHeading>
+        <AdaptiveParagraph className="text-gray-600">
+          Recover access to your account
+        </AdaptiveParagraph>
       </div>
 
       {/* === ENTER EMAIL === */}
       {stepId === "enter_email" && (
         <div className="card-base max-w-md mx-auto space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <AdaptiveLabel className="block text-gray-700 mb-2">
               Registered Email
-            </label>
+            </AdaptiveLabel>
             <AdaptiveInput
               type="email"
               placeholder="your@email.com"
@@ -118,14 +126,15 @@ export default function Recovery() {
           <AdaptiveButton onClick={handleEmailSubmit} className="w-full">
             Find Account
           </AdaptiveButton>
-          <p className="text-center text-gray-600 text-sm">
-            <Link
+          <AdaptiveParagraph className="text-center text-gray-600">
+            <AdaptiveLink
+              as={Link}
               to="/login"
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-blue-600 hover:text-blue-700"
             >
               Back to Login
-            </Link>
-          </p>
+            </AdaptiveLink>
+          </AdaptiveParagraph>
         </div>
       )}
 
@@ -133,13 +142,17 @@ export default function Recovery() {
       {stepId === "select_method" && (
         <div>
           <div className="card-base max-w-md mx-auto mb-8 text-center">
-            <p className="text-gray-600 mb-2">Verification email sent to:</p>
-            <p className="font-semibold text-gray-900">{email}</p>
+            <AdaptiveParagraph className="text-gray-600 mb-2">
+              Verification email sent to:
+            </AdaptiveParagraph>
+            <AdaptiveParagraph className="text-gray-900">
+              {email}
+            </AdaptiveParagraph>
           </div>
 
-          <p className="text-center text-gray-700 font-medium mb-6">
+          <AdaptiveParagraph className="text-center text-gray-700 mb-6">
             Choose a recovery method:
-          </p>
+          </AdaptiveParagraph>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-8">
             {/* QR CODE METHOD */}
@@ -148,10 +161,12 @@ export default function Recovery() {
               onClick={handleQRFlow}
             >
               <div className="text-5xl mb-4">📱</div>
-              <h3 className="font-bold text-gray-900 mb-2">QR Code Scan</h3>
-              <p className="text-gray-600 text-sm mb-4">
+              <AdaptiveHeading level={3} className="text-gray-900 mb-2">
+                QR Code Scan
+              </AdaptiveHeading>
+              <AdaptiveParagraph className="text-gray-600 mb-4">
                 Scan a QR code sent to your email to verify
-              </p>
+              </AdaptiveParagraph>
               <AdaptiveButton className="w-full">Use QR Code</AdaptiveButton>
             </div>
 
@@ -161,10 +176,12 @@ export default function Recovery() {
               onClick={handleTapYesFlow}
             >
               <div className="text-5xl mb-4">👆</div>
-              <h3 className="font-bold text-gray-900 mb-2">Tap Yes</h3>
-              <p className="text-gray-600 text-sm mb-4">
+              <AdaptiveHeading level={3} className="text-gray-900 mb-2">
+                Tap Yes
+              </AdaptiveHeading>
+              <AdaptiveParagraph className="text-gray-600 mb-4">
                 Approve the recovery request with a tap
-              </p>
+              </AdaptiveParagraph>
               <AdaptiveButton className="w-full bg-green-600 hover:bg-green-700">
                 Use Tap Yes
               </AdaptiveButton>

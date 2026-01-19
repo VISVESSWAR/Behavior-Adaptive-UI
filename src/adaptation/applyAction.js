@@ -2,18 +2,15 @@ import {
   BUTTON_SIZES,
   TEXT_SIZES,
   FONT_WEIGHTS,
-  SPACING_LEVELS
-} from "./uiLevels";
+  SPACING_LEVELS,
+} from "./uiVariants";
 
 export function applyAction(uiState, action) {
   const next = { ...uiState };
 
   switch (action) {
     case "button_up":
-      next.buttonSize = Math.min(
-        next.buttonSize + 1,
-        BUTTON_SIZES.length - 1
-      );
+      next.buttonSize = Math.min(next.buttonSize + 1, BUTTON_SIZES.length - 1);
       break;
 
     case "button_down":
@@ -21,10 +18,7 @@ export function applyAction(uiState, action) {
       break;
 
     case "text_up":
-      next.textSize = Math.min(
-        next.textSize + 1,
-        TEXT_SIZES.length - 1
-      );
+      next.textSize = Math.min(next.textSize + 1, TEXT_SIZES.length - 1);
       break;
 
     case "text_down":
@@ -32,10 +26,7 @@ export function applyAction(uiState, action) {
       break;
 
     case "font_up":
-      next.fontWeight = Math.min(
-        next.fontWeight + 1,
-        FONT_WEIGHTS.length - 1
-      );
+      next.fontWeight = Math.min(next.fontWeight + 1, FONT_WEIGHTS.length - 1);
       break;
 
     case "font_down":
@@ -43,10 +34,7 @@ export function applyAction(uiState, action) {
       break;
 
     case "spacing_up":
-      next.spacing = Math.min(
-        next.spacing + 1,
-        SPACING_LEVELS.length - 1
-      );
+      next.spacing = Math.min(next.spacing + 1, SPACING_LEVELS.length - 1);
       break;
 
     case "spacing_down":
