@@ -11,13 +11,15 @@ import Transaction from "./pages/Transaction";
 import Recovery from "./pages/Recovery";
 import Dashboard from "./pages/Dashboard";
 
-import { UIProvider } from "./adaptation/UIContext";
+import { UIProvider, useUIConfig } from "./adaptation/UIContext";
 import useUIVariants from "./adaptation/useUIVariants";
+import { usePersona } from "./persona/usePersona";
 import {
   AdaptiveHeading,
   AdaptiveParagraph,
   AdaptiveLink,
 } from "./components/AdaptiveText";
+import { AdaptationDebugger } from "./components/AdaptationDebugger";
 import "./index.css";
 
 function fmt(v, d = 2) {
@@ -29,6 +31,7 @@ function AppHeader() {
   const idleTime = useIdleTimer("global", "app");
   const scrollDepth = useScrollDepth("global", "app");
   const ui = useUIVariants();
+  const { persona } = useUIConfig();
 
   return (
     <header
@@ -91,7 +94,8 @@ function AppHeader() {
             Dashboard
           </AdaptiveLink>
         </nav>
-
+        <p>Persona: {persona.persona}</p>
+        <p>Status: {persona.stable ? "Stable" : "Learning..."}</p>
         {/* === METRICS SNAPSHOT === */}
         <div
           className={`mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${ui.spacing} text-xs`}
@@ -127,10 +131,14 @@ function AppHeader() {
 }
 
 export default function App() {
+  const metrics = useMouseTracker("global", "app");
+  const persona = usePersona(metrics);
+
   return (
     <Router>
-      <UIProvider>
+      <UIProvider persona={persona}>
         <AppHeader />
+        <AdaptationDebugger />
         <main className="min-h-screen bg-gray-50">
           {/* === ROUTES === */}
           <Routes>
