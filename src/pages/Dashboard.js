@@ -69,35 +69,29 @@ export default function Dashboard() {
             {
               label: "Total Clicks",
               value: metrics.s_num_clicks || 0,
-              icon: "🖱️",
             },
             {
               label: "Session Duration",
               value: `${fmt(metrics.s_session_duration)}s`,
-              icon: "⏱️",
             },
             {
               label: "Mouse Distance",
               value: fmt(metrics.s_total_distance),
-              icon: "📍",
             },
-            { label: "Idle Time", value: `${fmt(idleTime)}s`, icon: "😴" },
+            { label: "Idle Time", value: `${fmt(idleTime)}s` },
             {
               label: "Velocity Mean",
               value: fmt(metrics.s_vel_mean),
-              icon: "🚀",
             },
             {
               label: "Misclicks",
               value: metrics.s_num_misclicks || 0,
-              icon: "❌",
             },
             {
               label: "Scroll Depth",
               value: `${fmt(scrollDepth * 100, 1)}%`,
-              icon: "📜",
             },
-            { label: "Actions", value: metrics.s_num_actions || 0, icon: "✋" },
+            { label: "Actions", value: metrics.s_num_actions || 0 },
           ].map((item, idx) => (
             <div key={idx} className="card-base">
               <div className="flex items-start justify-between">
@@ -109,7 +103,6 @@ export default function Dashboard() {
                     {item.value}
                   </p>
                 </div>
-                <span className="text-4xl">{item.icon}</span>
               </div>
             </div>
           ))}

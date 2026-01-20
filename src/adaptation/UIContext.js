@@ -7,7 +7,7 @@ const UIContext = createContext();
 // Default UI state
 const DEFAULT_UI_STATE = {
   buttonSize: 1,
-  textSize: 4,
+  textSize: 2,
   fontWeight: 2,
   spacing: 1,
   borderRadius: 3,

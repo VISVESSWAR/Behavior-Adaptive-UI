@@ -93,7 +93,7 @@ export default function AdaptiveShowcase() {
           <AdaptiveLabel className="text-gray-600 block mb-3">
             Icon Size
           </AdaptiveLabel>
-          <div className={`${ui.icon}`}>🎯</div>
+          <div className={`${ui.icon}`}>-</div>
         </div>
 
         {/* Card Padding */}

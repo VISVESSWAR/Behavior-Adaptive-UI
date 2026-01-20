@@ -70,44 +70,37 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: "🎯",
                 title: "Smart Adaptation",
                 description:
                   "UI elements adapt in real-time based on user behavior patterns and interaction styles",
               },
               {
-                icon: "📊",
                 title: "Behavior Analytics",
                 description:
                   "Comprehensive tracking of mouse movements, clicks, scroll depth, and idle time",
               },
               {
-                icon: "👤",
                 title: "Persona Recognition",
                 description:
                   "Automatically detects user type (novice, intermediate, expert) for optimal UX",
               },
               {
-                icon: "🎨",
                 title: "Responsive Design",
                 description:
                   "Seamless experience across all devices with Tailwind CSS styling",
               },
               {
-                icon: "🔒",
                 title: "Secure & Fast",
                 description:
                   "Built with modern React best practices and optimized performance",
               },
               {
-                icon: "⚡",
                 title: "Real-time Updates",
                 description:
                   "Live metrics tracking with instant feedback and adaptive adjustments",
               },
             ].map((feature, idx) => (
               <div key={idx} className="card-base">
-                <div className="text-4xl mb-4">{feature.icon}</div>
                 <AdaptiveHeading level={3} className="text-gray-900 mb-2">
                   {feature.title}
                 </AdaptiveHeading>
@@ -131,21 +124,19 @@ export default function HomePage() {
           </AdaptiveHeading>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
-              { name: "Home", path: "/", icon: "🏠", color: "blue" },
-              { name: "Login", path: "/login", icon: "🔐", color: "purple" },
+              { name: "Home", path: "/", color: "blue" },
+              { name: "Login", path: "/login", color: "purple" },
               {
                 name: "Register",
                 path: "/register",
-                icon: "📝",
                 color: "green",
               },
               {
                 name: "Transaction",
                 path: "/transaction",
-                icon: "💳",
                 color: "amber",
               },
-              { name: "Recovery", path: "/recovery", icon: "🔑", color: "red" },
+              { name: "Recovery", path: "/recovery", color: "red" },
             ].map((flow, idx) => (
               <AdaptiveLink
                 key={idx}
@@ -153,7 +144,6 @@ export default function HomePage() {
                 to={flow.path}
                 className="card-base text-center hover:border-gray-400 hover:border-2 transform hover:scale-105"
               >
-                <div className="text-5xl mb-4">{flow.icon}</div>
                 <AdaptiveHeading level={3} className="text-gray-900">
                   {flow.name}
                 </AdaptiveHeading>
