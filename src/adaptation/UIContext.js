@@ -66,6 +66,12 @@ export function UIProvider({ children, persona = null }) {
   // Apply an action to update UI state
   const dispatchAction = (action) => {
     setUIConfig((prevConfig) => applyAction(prevConfig, action));
+
+    // Record action in metrics collector if available
+    if (window.__metricsCollector) {
+      window.__metricsCollector.recordAction(action);
+      console.log(`[UIContext] Action recorded: ${action}`);
+    }
   };
 
   return (

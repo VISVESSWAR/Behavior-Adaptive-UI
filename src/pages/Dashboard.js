@@ -11,6 +11,7 @@ import {
   AdaptiveLink,
 } from "../components/AdaptiveText";
 import AdaptiveButton from "../components/AdaptiveButton";
+import { MetricsExportPanel } from "../components/MetricsExportPanel";
 
 function fmt(v, d = 2) {
   return typeof v === "number" ? v.toFixed(d) : "0.00";
@@ -208,7 +209,20 @@ export default function Dashboard() {
       )}
 
       {/* === ACTION BUTTONS === */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap mb-8">
+        <AdaptiveButton
+          onClick={() => {
+            if (window.__metricsCollector) {
+              window.__metricsCollector.completeFlow();
+              console.log("[Dashboard] Flow marked as complete");
+              alert("Session flow completed and saved!");
+            }
+          }}
+          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+        >
+          Complete Session
+        </AdaptiveButton>
+
         <AdaptiveLink
           as={Link}
           to="/login"
@@ -231,6 +245,9 @@ export default function Dashboard() {
           Back to Home
         </AdaptiveLink>
       </div>
+
+      {/* === METRICS EXPORT PANEL === */}
+      <MetricsExportPanel />
     </div>
   );
 }

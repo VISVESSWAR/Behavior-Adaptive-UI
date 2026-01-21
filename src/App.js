@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
+import MetricsCollector from "./utils/metricsCollectorSimplified";
 
 import HomePage from "./pages/Home";
 import Login from "./pages/Login";
@@ -133,6 +135,63 @@ function AppHeader() {
 export default function App() {
   const metrics = useMouseTracker("global", "app");
   const persona = usePersona(metrics);
+  const collectorRef = useRef(null);
+
+  // Initialize metrics collector on mount
+  useEffect(() => {
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    collectorRef.current = new MetricsCollector(sessionId, "app", "main");
+    console.log("[App] Metrics collector initialized:", sessionId);
+
+    return () => {
+      console.log("[App] Metrics collector cleanup");
+      if (collectorRef.current) {
+        collectorRef.current.completeFlow();
+      }
+    };
+  }, []);
+
+  // Update metrics in collector
+  useEffect(() => {
+    if (collectorRef.current && metrics) {
+      collectorRef.current.updateMetrics(metrics);
+    }
+  }, [metrics]);
+
+  // Update persona in collector
+  useEffect(() => {
+    if (collectorRef.current && persona) {
+      collectorRef.current.updatePersona(persona);
+    }
+  }, [persona]);
+
+  // Collect snapshot every 10 seconds
+  useEffect(() => {
+    if (!collectorRef.current) return;
+
+    const timer = setInterval(() => {
+      if (collectorRef.current.shouldCollect()) {
+        const snapshot = collectorRef.current.collectSnapshot();
+        if (snapshot) {
+          console.log("[App] Snapshot collected:", {
+            timestamp: new Date(snapshot.timestamp).toLocaleTimeString(),
+            persona: snapshot.persona.type,
+            action: snapshot.action,
+          });
+        }
+      }
+    }, 1000); // Check every second if 10s has passed
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Store collector in window for debugging
+  useEffect(() => {
+    window.__metricsCollector = collectorRef.current;
+    return () => {
+      delete window.__metricsCollector;
+    };
+  }, []);
 
   return (
     <Router>

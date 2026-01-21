@@ -1,18 +1,13 @@
-/**
- * Metrics Export & Collection Status Component
- * CORRECTED VERSION: Works with snapshots (not transitions)
- * Builds transitions at export time
- */
-
 import { useState, useEffect } from "react";
 import IndexedDBManager from "../utils/indexedDBManager";
 import { TransitionBuilder } from "../utils/snapshotSchema";
+import { computeReward } from "../utils/rewardFunction";
 import {
   AdaptiveHeading,
   AdaptiveParagraph,
   AdaptiveLabel,
 } from "./AdaptiveText";
-import { AdaptiveButton } from "./AdaptiveButton";
+import AdaptiveButton  from "./AdaptiveButton";
 
 export function MetricsExportPanel() {
   const [stats, setStats] = useState(null);
@@ -37,24 +32,7 @@ export function MetricsExportPanel() {
     }
   };
 
-  /**
-   * Default reward function
-   * Customize based on your task/feedback
-   */
-  const defaultRewardFunction = (s_t, a_t, s_t1) => {
-    // Reward for session progress
-    const progressReward =
-      (s_t1.s_session_duration - s_t.s_session_duration) * 0.1;
-
-    // Bonus for reaching expert persona
-    const personaBonus = s_t1.s_persona_expert ? 1.0 : 0.0;
-
-    // Penalty for excessive clicks
-    const clickPenalty = s_t1.s_num_clicks > 10 ? -0.5 : 0;
-
-    const totalReward = progressReward + personaBonus + clickPenalty;
-    return Math.max(-10, Math.min(10, totalReward)); // Clip to [-10, 10]
-  };
+  const rewardFunction = computeReward;
 
   const handleExport = async () => {
     if (!stats || stats.recordCount === 0) {
@@ -83,7 +61,7 @@ export function MetricsExportPanel() {
         // Build transitions from snapshots and export as CSV
         const transitions = TransitionBuilder.buildTransitions(
           sortedSnapshots,
-          defaultRewardFunction,
+          rewardFunction,
         );
         data = TransitionBuilder.toCSV(transitions);
         filename = `dqn_ui_dataset_${Date.now()}.csv`;
@@ -108,7 +86,7 @@ export function MetricsExportPanel() {
         // Export transitions as JSON
         const transitions = TransitionBuilder.buildTransitions(
           sortedSnapshots,
-          defaultRewardFunction,
+          rewardFunction,
         );
         const json = {
           metadata: {
@@ -159,7 +137,7 @@ export function MetricsExportPanel() {
 
       const transitions = TransitionBuilder.buildTransitions(
         sortedSnapshots,
-        defaultRewardFunction,
+        rewardFunction,
       );
 
       const validation = TransitionBuilder.validate(transitions);
