@@ -1,56 +1,79 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+* {
+  @apply transition-colors duration-200;
+}
+
 body {
-  margin: 0;
+  @apply m-0 font-sans bg-gray-100;
   font-family: Arial, sans-serif;
-  background: #f4f6f8;
 }
 
 .page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  @apply flex justify-center items-center min-h-screen;
 }
 
 .card {
-  background: white;
-  padding: 30px;
-  width: 320px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  @apply bg-white p-8 w-80 rounded-lg shadow-lg;
 }
 
 .card.wide {
-  width: 500px;
+  @apply w-2xl;
 }
 
 h2 {
-  text-align: center;
+  @apply text-center text-2xl font-bold mb-6;
 }
 
-input, select, button {
-  width: 100%;
-  margin: 8px 0;
-  padding: 10px;
+input, select {
+  @apply w-full my-2 p-3 border border-gray-300 rounded;
+  @apply focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
 }
 
 button {
-  background: #2563eb;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-button:hover {
-  background: #1e40af;
+  @apply w-full my-2 p-3 bg-blue-600 text-white rounded cursor-pointer;
+  @apply hover:bg-blue-700 active:bg-blue-800;
 }
 
 .link {
-  text-align: center;
-  margin-top: 10px;
+  @apply text-center mt-4 text-sm;
+}
+
+.link a {
+  @apply text-blue-600 hover:underline;
 }
 
 .qr-box {
-  text-align: center;
-  margin: 15px 0;
+  @apply text-center my-4 p-4 border border-gray-200 rounded;
+}
+
+.qr-box img {
+  @apply max-w-xs;
+}
+
+/* Adaptive UI specific styles */
+.adaptive-heading {
+  @apply font-bold text-gray-900;
+}
+
+.adaptive-text {
+  @apply text-gray-700;
+}
+
+.adaptive-input {
+  @apply w-full p-3 border border-gray-300 rounded;
+  @apply focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
+}
+
+.adaptive-button {
+  @apply w-full p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded;
+  @apply hover:from-blue-700 hover:to-purple-700 active:from-blue-800 active:to-purple-800;
+  @apply font-medium transition-all duration-200;
+}
+
+.debug-panel {
+  @apply fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg max-w-xs;
+  @apply text-xs opacity-75 hover:opacity-100 transition-opacity;
 }
