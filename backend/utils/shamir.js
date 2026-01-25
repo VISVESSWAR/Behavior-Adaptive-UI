@@ -1,49 +1,94 @@
 import crypto from "crypto";
 
-const PRIME = 208351617316091241234326746312124448251n;
-const mod = x => ((x % PRIME) + PRIME) % PRIME;
+/**
+ * Large prime for finite field arithmetic.
+ * Must be larger than any possible secret.
+ * (secp256k1 prime – standard, safe choice)
+ */
+const PRIME = BigInt(
+  "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
+);
 
+// Safe modulo operation
+const mod = (x) => ((x % PRIME) + PRIME) % PRIME;
+
+/* ============================
+   SHAMIR SPLIT (UNCHANGED API)
+   ============================ */
 export function shamirSplit(secretBuffer, n, k) {
-    const secret = BigInt("0x" + secretBuffer.toString("hex"));
+  const secret = BigInt("0x" + secretBuffer.toString("hex"));
 
-    const coeffs = [secret];
-    for (let i = 1; i < k; i++) {
-        coeffs.push(BigInt("0x" + crypto.randomBytes(32).toString("hex")));
+  if (k > n) throw new Error("Threshold k cannot exceed n");
+
+  // Polynomial coefficients: f(x) = a0 + a1x + a2x² + ...
+  const coeffs = [secret];
+  for (let i = 1; i < k; i++) {
+    coeffs.push(
+      BigInt("0x" + crypto.randomBytes(32).toString("hex")) % PRIME
+    );
+  }
+
+  const shares = [];
+  for (let x = 1; x <= n; x++) {
+    let y = 0n;
+    const bx = BigInt(x);
+
+    for (let i = 0; i < coeffs.length; i++) {
+      y = mod(y + coeffs[i] * (bx ** BigInt(i)));
     }
 
-    const shares = [];
-    for (let x = 1; x <= n; x++) {
-        let y = 0n;
-        for (let i = 0; i < coeffs.length; i++) {
-            y = mod(y + coeffs[i] * (BigInt(x) ** BigInt(i)));
-        }
-        shares.push({ x, y: y.toString() });
-    }
+    shares.push({
+      x,
+      y: y.toString() // stored as string for DB safety
+    });
+  }
 
-    return shares;
+  return shares;
+}
+
+/* ============================
+   MODULAR INVERSE (SAFE)
+   ============================ */
+function modPow(base, exp) {
+  let result = 1n;
+  base = mod(base);
+
+  while (exp > 0n) {
+    if (exp & 1n) result = mod(result * base);
+    base = mod(base * base);
+    exp >>= 1n;
+  }
+  return result;
 }
 
 function invert(a) {
-    return mod(a ** (PRIME - 2n));
+  // Fermat's Little Theorem: a^(p−2) mod p
+  return modPow(a, PRIME - 2n);
 }
 
+/* ============================
+   LAGRANGE RECONSTRUCTION
+   ============================ */
 export function lagrange(shares) {
-    let secret = 0n;
+  let secret = 0n;
 
-    for (let j = 0; j < shares.length; j++) {
-        let xj = BigInt(shares[j].x);
-        let yj = BigInt(shares[j].y);
-        let lj = 1n;
+  for (let j = 0; j < shares.length; j++) {
+    const xj = BigInt(shares[j].x);
+    const yj = BigInt(shares[j].y);
 
-        for (let m = 0; m < shares.length; m++) {
-            if (m !== j) {
-                let xm = BigInt(shares[m].x);
-                lj = mod(lj * mod((0n - xm) * invert(xj - xm)));
-            }
-        }
+    let lj = 1n;
 
-        secret = mod(secret + yj * lj);
+    for (let m = 0; m < shares.length; m++) {
+      if (m !== j) {
+        const xm = BigInt(shares[m].x);
+        lj = mod(lj * mod(0n - xm) * invert(xj - xm));
+      }
     }
 
-    return Buffer.from(secret.toString(16), "hex");
+    secret = mod(secret + yj * lj);
+  }
+
+  // 🔑 CRITICAL: pad to fixed 32-byte length
+  const hex = secret.toString(16).padStart(64, "0");
+  return Buffer.from(hex, "hex");
 }

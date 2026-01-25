@@ -29,8 +29,8 @@
     ]
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.16",
     "eslint-config-react-app": "^7.0.1",
-    "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "postcss": "^8.4.31"
   }
 }

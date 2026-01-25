@@ -1,0 +1,7 @@
+speed,idle,hesitation,entropy,label
+0.30,0.75,0.60,0.28,novice_old
+0.35,0.68,0.62,0.33,novice_old
+0.50,0.45,0.40,0.50,intermediate
+0.60,0.42,0.38,0.55,intermediate
+0.78,0.25,0.22,0.65,expert
+0.82,0.18,0.20,0.72,expert

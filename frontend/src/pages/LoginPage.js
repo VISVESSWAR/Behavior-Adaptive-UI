@@ -81,6 +81,21 @@ export default function LoginPage() {
         />
 
         <AdaptiveButton onClick={login}>Login</AdaptiveButton>
+        
+        <AdaptiveButton
+          variant="secondary"
+          onClick={() => {
+            logEvent({
+              type: "recovery_initiated",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+              timestamp: new Date().toISOString(),
+            });
+            nav("/recover");
+          }}
+        >
+          Recover Account
+        </AdaptiveButton>
 
         <AdaptiveParagraph className="link">
           New user? <Link to="/signup">Signup here</Link>

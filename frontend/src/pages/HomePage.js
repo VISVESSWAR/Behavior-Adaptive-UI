@@ -14,9 +14,9 @@ export default function HomePage() {
   const [view, setView] = useState("qr");
   const [qrList, setQrList] = useState([]);
   const [peers, setPeers] = useState([]);
+  const [requests, setRequests] = useState([]);   // ✅ NEW
   const [loading, setLoading] = useState(false);
 
-  // Metrics collection for this page
   useMouseTracker(FLOW_ID, STEP_ID);
   useIdleTimer(FLOW_ID, STEP_ID);
   useScrollDepth(FLOW_ID, STEP_ID);
@@ -31,10 +31,11 @@ export default function HomePage() {
     });
 
     const token = localStorage.getItem("token");
-    const url =
-      view === "qr"
-        ? "/home/shared-qr"
-        : "/home/peer-details";
+    let url = "";
+
+    if (view === "qr") url = "/home/shared-qr";
+    if (view === "peers") url = "/home/peer-details";
+    if (view === "requests") url = "/recover/tap/requests"; // ✅ NEW
 
     setLoading(true);
     fetch("http://localhost:5000" + url, {
@@ -42,13 +43,16 @@ export default function HomePage() {
     })
       .then((r) => r.json())
       .then((d) => {
-        view === "qr" ? setQrList(d) : setPeers(d.peers);
+        if (view === "qr") setQrList(d);
+        if (view === "peers") setPeers(d.peers);
+        if (view === "requests") setRequests(d); // ✅ NEW
+
         logEvent({
           type: "data_loaded",
           flowId: FLOW_ID,
           stepId: STEP_ID,
           view,
-          itemCount: view === "qr" ? d.length : d.peers?.length || 0,
+          itemCount: Array.isArray(d) ? d.length : d.peers?.length || 0,
         });
       })
       .catch((err) => {
@@ -62,6 +66,23 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, [view]);
 
+  // ✅ NEW: approve / decline handler
+  async function respond(requestId, decision) {
+    const token = localStorage.getItem("token");
+
+    await fetch("http://localhost:5000/recover/tap/respond", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ requestId, decision })
+    });
+
+    // refresh list
+    setRequests(prev => prev.filter(r => r.id !== requestId));
+  }
+
   return (
     <div className="page">
       <div className="card wide">
@@ -74,10 +95,12 @@ export default function HomePage() {
         >
           <option value="qr">List Shared QR</option>
           <option value="peers">Peer Details</option>
+          <option value="requests">Recovery Requests</option> {/* ✅ NEW */}
         </select>
 
         {loading && <AdaptiveParagraph>Loading...</AdaptiveParagraph>}
 
+        {/* ================= QR LIST ================= */}
         {!loading && view === "qr" &&
           (qrList.length > 0 ? (
             qrList.map((q, i) => (
@@ -90,6 +113,7 @@ export default function HomePage() {
             <AdaptiveParagraph>No shared QR codes available.</AdaptiveParagraph>
           ))}
 
+        {/* ================= PEER LIST ================= */}
         {!loading && view === "peers" &&
           (peers.length > 0 ? (
             peers.map((p, i) => (
@@ -97,6 +121,31 @@ export default function HomePage() {
             ))
           ) : (
             <AdaptiveParagraph>No peer details available.</AdaptiveParagraph>
+          ))}
+
+        {/* ================= TAP-YES REQUESTS ================= */}
+        {!loading && view === "requests" &&
+          (requests.length > 0 ? (
+            requests.map((r) => (
+              <div key={r.id} className="qr-box">
+                <AdaptiveParagraph>
+                  Recovery request from <strong>{r.owner_email}</strong>
+                </AdaptiveParagraph>
+
+                <AdaptiveButton onClick={() => respond(r.id, "approved")}>
+                  Approve
+                </AdaptiveButton>
+
+                <AdaptiveButton
+                  variant="secondary"
+                  onClick={() => respond(r.id, "declined")}
+                >
+                  Decline
+                </AdaptiveButton>
+              </div>
+            ))
+          ) : (
+            <AdaptiveParagraph>No pending recovery requests.</AdaptiveParagraph>
           ))}
       </div>
     </div>

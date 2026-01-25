@@ -5,10 +5,11 @@ dotenv.config();
 
 import { initDB } from "./db.js";
 import { router as signupRoute } from "./routes/signup.js";
-import { router as recoveryRoute } from "./routes/recovery.js";
 import { router as peerRoute } from "./routes/peer.js";
 import { router as home } from "./routes/home.js";
 import { router as auth } from "./routes/auth.js";
+import { router as recovery } from "./routes/recovery.js";
+
 
 
 const app = express();
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use("/auth", auth);
 app.use("/home", home);
 app.use("/signup", signupRoute);
-app.use("/recover", recoveryRoute);
+app.use("/recover", recovery);
 app.use("/peer", peerRoute);
 
 // Start Server

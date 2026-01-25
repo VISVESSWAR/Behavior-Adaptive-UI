@@ -20,7 +20,7 @@ body {
 }
 
 .card.wide {
-  @apply w-2xl;
+  @apply max-w-2xl w-full;
 }
 
 h2 {
