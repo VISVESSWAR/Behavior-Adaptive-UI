@@ -91,6 +91,9 @@ export default function SignupPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() =>
+            logEvent({ type: "focus_email", flowId: FLOW_ID, stepId: STEP_ID })
+          }
         />
 
         <AdaptiveInput
@@ -98,6 +101,13 @@ export default function SignupPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onFocus={() =>
+            logEvent({
+              type: "focus_password",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            })
+          }
         />
 
         {/* PEER-BASED RECOVERY CONFIG */}
@@ -112,6 +122,13 @@ export default function SignupPage() {
                 setNumPeers(n);
                 setPeers(Array(n).fill(""));
               }}
+              onFocus={() =>
+                logEvent({
+                  type: "focus_num_peers",
+                  flowId: FLOW_ID,
+                  stepId: STEP_ID,
+                })
+              }
             />
 
             <AdaptiveInput
@@ -119,6 +136,13 @@ export default function SignupPage() {
               placeholder="Threshold (k)"
               value={threshold}
               onChange={(e) => setThreshold(Number(e.target.value))}
+              onFocus={() =>
+                logEvent({
+                  type: "focus_threshold",
+                  flowId: FLOW_ID,
+                  stepId: STEP_ID,
+                })
+              }
             />
 
             {peers.map((p, i) => (
@@ -132,27 +156,52 @@ export default function SignupPage() {
                   copy[i] = e.target.value;
                   setPeers(copy);
                 }}
+                onFocus={() =>
+                  logEvent({
+                    type: `focus_peer_${i + 1}_email`,
+                    flowId: FLOW_ID,
+                    stepId: STEP_ID,
+                  })
+                }
               />
             ))}
           </>
         )}
 
-        <AdaptiveButton onClick={signup}>Signup</AdaptiveButton>
+        <AdaptiveButton
+          onClick={() => {
+            logEvent({
+              type: "click_signup_button",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+            signup();
+          }}
+        >
+          Signup
+        </AdaptiveButton>
 
         {/* BACK TO LOGIN */}
-        <button
-          onClick={() => navigate("/")}
+        <AdaptiveButton
+          onClick={() => {
+            logEvent({
+              type: "click_back_button",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+            navigate("/");
+          }}
           style={{
             marginTop: "10px",
             background: "transparent",
             border: "none",
             color: "#007bff",
             cursor: "pointer",
-            textDecoration: "underline"
+            textDecoration: "underline",
           }}
         >
           ← Back to Login
-        </button>
+        </AdaptiveButton>
       </div>
     </div>
   );

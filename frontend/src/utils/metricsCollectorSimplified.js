@@ -23,6 +23,7 @@ export class MetricsCollector {
     this.currentAction = -1; // No action yet
     this.currentPersona = null;
     this.currentUIState = null;
+    this.currentTaskData = null; // Task tracking data
     this.dbManager = new IndexedDBManager();
     this.dbManager
       .init()
@@ -61,6 +62,41 @@ export class MetricsCollector {
   }
 
   /**
+   * Update task data for snapshot inclusion
+   */
+  updateTaskData(taskData) {
+    this.currentTaskData = taskData;
+  }
+
+  /**
+   * Calculate task-based reward
+   * +0.5 if completed
+   * -0.3 if timeout
+   * -0.01 × pathLength penalty
+   */
+  calculateTaskReward(taskData) {
+    if (!taskData) return 0;
+
+    let reward = 0;
+
+    // Bonus for completion
+    if (taskData.completed) {
+      reward += 0.5;
+    }
+
+    // Penalty for timeout
+    if (taskData.failed) {
+      reward -= 0.3;
+    }
+
+    // Path length penalty
+    const pathLength = taskData.pathLength || 0;
+    reward -= 0.01 * pathLength;
+
+    return reward;
+  }
+
+  /**
    * Check if it's time to collect a snapshot
    * Call this from a timer or on user interaction
    */
@@ -84,6 +120,11 @@ export class MetricsCollector {
       return null;
     }
 
+    // Calculate elapsed time and task data
+    const elapsedTime = Date.now() - this.lastCollectionTime;
+    const taskData = this.currentTaskData || {};
+    const taskReward = this.calculateTaskReward(taskData);
+
     const snapshot = {
       timestamp: Date.now(),
       sessionId: this.sessionId,
@@ -97,6 +138,16 @@ export class MetricsCollector {
       action: this.currentAction, // Action that was just applied
 
       uiState: this.currentUIState || {},
+
+      // Include task data in snapshot
+      task: {
+        completed: taskData.completed || false,
+        elapsedTime: taskData.elapsedTime || 0,
+        timeLimit: taskData.timeLimit || 0,
+        pathLength: taskData.pathLength || 0,
+      },
+
+      taskReward: taskReward,
 
       done: false, // Will be set to true when flow completes
     };
@@ -113,7 +164,7 @@ export class MetricsCollector {
           this.windowMetrics,
           this.currentPersona,
         ),
-        reward: 0,
+        reward: taskReward,
       })
       .catch((err) =>
         console.error("[MetricsCollector] Failed to save snapshot", err),

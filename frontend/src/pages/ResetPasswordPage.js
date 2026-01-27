@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { post } from "../api";
 import { useNavigate } from "react-router-dom";
+import { logEvent } from "../logging/eventLogger";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
@@ -22,7 +23,7 @@ export default function ResetPasswordPage() {
     try {
       await post("/recover/reset-password", {
         email,
-        newPassword: password
+        newPassword: password,
       });
 
       alert("Password reset successful");
@@ -46,23 +47,53 @@ export default function ResetPasswordPage() {
           type="password"
           placeholder="New Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
+          onFocus={() =>
+            logEvent({
+              type: "focus_new_password",
+              flowId: "recovery",
+              stepId: "reset_password",
+            })
+          }
         />
 
         <AdaptiveInput
           type="password"
           placeholder="Confirm Password"
           value={confirm}
-          onChange={e => setConfirm(e.target.value)}
+          onChange={(e) => setConfirm(e.target.value)}
+          onFocus={() =>
+            logEvent({
+              type: "focus_confirm_password",
+              flowId: "recovery",
+              stepId: "reset_password",
+            })
+          }
         />
 
-        <AdaptiveButton onClick={resetPassword}>
+        <AdaptiveButton
+          onClick={() => {
+            logEvent({
+              type: "click_reset_password_button",
+              flowId: "recovery",
+              stepId: "reset_password",
+            });
+            resetPassword();
+          }}
+        >
           Reset Password
         </AdaptiveButton>
 
         <AdaptiveButton
           style={{ background: "#eee", color: "#333" }}
-          onClick={() => navigate("/recover")}
+          onClick={() => {
+            logEvent({
+              type: "click_back_button",
+              flowId: "recovery",
+              stepId: "reset_password",
+            });
+            navigate("/recover");
+          }}
         >
           Back
         </AdaptiveButton>

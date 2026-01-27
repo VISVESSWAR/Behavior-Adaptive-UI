@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { useUIConfig } from "./adaptation/UIContext";
+import { useTask } from "./task/TaskContext";
 import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
 import { AdaptationDebugger } from "./components/AdaptationDebugger";
+import MetricsCollector from "./utils/metricsCollectorSimplified";
 
 /* =========================
    AUTH & CORE PAGES
@@ -15,15 +18,50 @@ import HomePage from "./pages/HomePage";
 /* =========================
    RECOVERY PAGES
    ========================= */
-import RecoveryPage from "./pages/RecoveryPage";          // choose method
-import OtpRecoverPage from "./pages/OtpRecoverPage";      // OTP input only
-import ScanQRPage from "./pages/ScanQRPage";              // QR scan
-import TapWaitPage from "./pages/TapWaitPage";            // waiting for peers
+import RecoveryPage from "./pages/RecoveryPage"; // choose method
+import OtpRecoverPage from "./pages/OtpRecoverPage"; // OTP input only
+import ScanQRPage from "./pages/ScanQRPage"; // QR scan
+import TapWaitPage from "./pages/TapWaitPage"; // waiting for peers
 import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // reset password
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-
 export default function App() {
+  const metricsCollectorRef = useRef(null);
+  const task = useTask();
+
+  // Initialize global metrics collector on mount
+  useEffect(() => {
+    const sessionId = Date.now();
+    const metricsCollector = new MetricsCollector(sessionId, "global", "app");
+    metricsCollectorRef.current = metricsCollector;
+    console.log(
+      `[App] Initialized MetricsCollector with sessionId: ${sessionId}`,
+    );
+    return () => {
+      console.log("[App] MetricsCollector cleanup");
+    };
+  }, []);
+
+  // Sync task data with MetricsCollector
+  useEffect(() => {
+    if (metricsCollectorRef.current && task.taskStartTime) {
+      const elapsedTime = Date.now() - task.taskStartTime;
+      metricsCollectorRef.current.updateTaskData({
+        completed: task.completed,
+        failed: task.failed,
+        elapsedTime: elapsedTime,
+        timeLimit: task.timeLimit,
+        pathLength: task.pathSequence.length,
+      });
+    }
+  }, [
+    task.completed,
+    task.failed,
+    task.taskStartTime,
+    task.timeLimit,
+    task.pathSequence.length,
+  ]);
+
   // Global UX instrumentation
   useMouseTracker("global", "app");
   useIdleTimer("global", "app");
@@ -36,8 +74,7 @@ export default function App() {
       {/* Optional debug / persona header */}
       <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
         <div style={{ fontSize: "12px", color: "#666" }}>
-          Current Persona:{" "}
-          <strong>{persona?.persona || "loading..."}</strong>
+          Current Persona: <strong>{persona?.persona || "loading..."}</strong>
         </div>
       </header>
 

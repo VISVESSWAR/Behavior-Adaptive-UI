@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
-import MetricsCollector from "./utils/metricsCollectorSimplified";
+import MetricsCollector from "./utils/metricsCollectorSimplified.js";
 
 import HomePage from "./pages/Home";
 import Login from "./pages/Login";
@@ -31,7 +31,7 @@ function fmt(v, d = 2) {
 function AppHeader() {
   const metrics = useMouseTracker("global", "app");
   const idleTime = useIdleTimer("global", "app");
-  const scrollDepth = useScrollDepth("global", "app");
+  useScrollDepth("global", "app");
   const ui = useUIVariants();
   const { persona } = useUIConfig();
 

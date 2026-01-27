@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import { logEvent } from "../logging/eventLogger";
+import { useTask } from "../task/TaskContext";
 import AdaptiveInput from "../components/AdaptiveInput";
 import AdaptiveButton from "../components/AdaptiveButton";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
@@ -16,11 +17,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const nav = useNavigate();
+  const task = useTask();
 
   // Metrics collection for this page
   useMouseTracker(FLOW_ID, STEP_ID);
   useIdleTimer(FLOW_ID, STEP_ID);
 
+  // Start task on mount
   useEffect(() => {
     logEvent({
       type: "page_view",
@@ -28,6 +31,9 @@ export default function LoginPage() {
       stepId: STEP_ID,
       timestamp: new Date().toISOString(),
     });
+
+    // Start login task with 45 second time limit
+    task.startTask("login_task", 45000);
   }, []);
 
   async function login() {
@@ -48,6 +54,9 @@ export default function LoginPage() {
         stepId: STEP_ID,
         email,
       });
+
+      // Mark task as completed on successful login
+      task.completeTask();
 
       nav("/home");
     } catch (err) {
@@ -71,6 +80,14 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() => {
+            task.logStep("login_email");
+            logEvent({
+              type: "focus_email",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+          }}
         />
 
         <AdaptiveInput
@@ -78,15 +95,35 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onFocus={() => {
+            task.logStep("login_password");
+            logEvent({
+              type: "focus_password",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+          }}
         />
 
-        <AdaptiveButton onClick={login}>Login</AdaptiveButton>
-        
+        <AdaptiveButton
+          onClick={() => {
+            task.logStep("login_submit");
+            logEvent({
+              type: "click_login_button",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+            login();
+          }}
+        >
+          Login
+        </AdaptiveButton>
+
         <AdaptiveButton
           variant="secondary"
           onClick={() => {
             logEvent({
-              type: "recovery_initiated",
+              type: "click_recover_button",
               flowId: FLOW_ID,
               stepId: STEP_ID,
               timestamp: new Date().toISOString(),

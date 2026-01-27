@@ -89,7 +89,6 @@ export default function RecoveryPage() {
           navigate("/tap-wait");
         }
       }
-
     } catch (err) {
       logEvent({
         type: "recovery_error",
@@ -110,13 +109,22 @@ export default function RecoveryPage() {
           placeholder="Account Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() =>
+            logEvent({ type: "focus_email", flowId: FLOW_ID, stepId: STEP_ID })
+          }
           style={{ marginBottom: "15px" }}
         />
 
         {/* Peer-only options */}
         {isPeerUser && (
           <div style={{ marginBottom: "15px" }}>
-            <AdaptiveLabel style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+            <AdaptiveLabel
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "10px",
+              }}
+            >
               <input
                 type="radio"
                 checked={method === "qr"}
@@ -138,13 +146,29 @@ export default function RecoveryPage() {
           </div>
         )}
 
-        <AdaptiveButton onClick={startRecovery}>
+        <AdaptiveButton
+          onClick={() => {
+            logEvent({
+              type: "click_continue_button",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+            startRecovery();
+          }}
+        >
           Continue
         </AdaptiveButton>
 
         <AdaptiveButton
           style={{ background: "#eee", color: "#333" }}
-          onClick={() => navigate("/")}
+          onClick={() => {
+            logEvent({
+              type: "click_back_button",
+              flowId: FLOW_ID,
+              stepId: STEP_ID,
+            });
+            navigate("/");
+          }}
         >
           Back to Login
         </AdaptiveButton>

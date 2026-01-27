@@ -5,6 +5,7 @@ import AdaptiveInput from "../components/AdaptiveInput";
 import AdaptiveButton from "../components/AdaptiveButton";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
 import "../styles.css";
+import { logEvent } from "../logging/eventLogger";
 
 export default function OtpRecoverPage() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function OtpRecoverPage() {
     }
 
     const interval = setInterval(() => {
-      setTimer(t => t - 1);
+      setTimer((t) => t - 1);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -37,7 +38,6 @@ export default function OtpRecoverPage() {
 
       // ✅ OTP VERIFIED → GO TO COMMON RESET PAGE
       navigate("/reset-password");
-
     } catch (err) {
       alert(err.message);
     }
@@ -70,25 +70,55 @@ export default function OtpRecoverPage() {
           placeholder="Enter OTP"
           value={otp}
           onChange={(e) => setOtp(e.target.value)}
+          onFocus={() =>
+            logEvent({
+              type: "focus_otp",
+              flowId: "recovery",
+              stepId: "otp_recover",
+            })
+          }
         />
 
-        <AdaptiveButton onClick={verifyOtp}>
+        <AdaptiveButton
+          onClick={() => {
+            logEvent({
+              type: "click_verify_otp_button",
+              flowId: "recovery",
+              stepId: "otp_recover",
+            });
+            verifyOtp();
+          }}
+        >
           Verify OTP
         </AdaptiveButton>
 
         {!canResend ? (
-          <AdaptiveParagraph>
-            Resend OTP in {timer}s
-          </AdaptiveParagraph>
+          <AdaptiveParagraph>Resend OTP in {timer}s</AdaptiveParagraph>
         ) : (
-          <AdaptiveButton onClick={resendOtp}>
+          <AdaptiveButton
+            onClick={() => {
+              logEvent({
+                type: "click_resend_otp_button",
+                flowId: "recovery",
+                stepId: "otp_recover",
+              });
+              resendOtp();
+            }}
+          >
             Resend OTP
           </AdaptiveButton>
         )}
 
         <AdaptiveButton
           style={{ background: "#eee", color: "#333" }}
-          onClick={() => navigate("/recover")}
+          onClick={() => {
+            logEvent({
+              type: "click_back_button",
+              flowId: "recovery",
+              stepId: "otp_recover",
+            });
+            navigate("/recover");
+          }}
         >
           Back
         </AdaptiveButton>
