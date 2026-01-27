@@ -16,6 +16,8 @@ const STEP_ID = "start";
 export default function RecoveryPage() {
   const [email, setEmail] = useState("");
   const [method, setMethod] = useState("qr"); // qr | tap
+  const [isPeerUser, setIsPeerUser] = useState(false);
+
   const navigate = useNavigate();
 
   useMouseTracker(FLOW_ID, STEP_ID);
@@ -28,39 +30,66 @@ export default function RecoveryPage() {
         type: "recovery_started",
         flowId: FLOW_ID,
         stepId: STEP_ID,
-        method,
         timestamp: new Date().toISOString(),
       });
 
-      // Step 1: Get threshold & commitment info
-      const res = await post("/recover/start", { email });
+      /* ===============================
+         STEP 0: Decide recovery mode
+         =============================== */
+      const decision = await post("/recover/decide", { email });
 
+      // ✅ GLOBAL STATE FOR ALL RECOVERY STEPS
       localStorage.setItem("email", email);
-      localStorage.setItem("threshold", res.threshold);
+      localStorage.setItem("recovery_mode", decision.recovery_mode);
 
-      // Method 1: QR scan
-      if (method === "qr") {
+      /* ===============================
+         OTP USERS
+         =============================== */
+      if (decision.recovery_mode === "otp") {
         logEvent({
           type: "recovery_method_selected",
           flowId: FLOW_ID,
           stepId: STEP_ID,
-          method: "qr",
+          method: "otp",
         });
-        navigate("/scan");
+
+        await post("/recover/otp/start", { email });
+        navigate("/otp-recover");
+        return;
       }
 
-      // Method 2: Tap-Yes approval
-      if (method === "tap") {
-        logEvent({
-          type: "recovery_method_selected",
-          flowId: FLOW_ID,
-          stepId: STEP_ID,
-          method: "tap",
-        });
-      await post("/recover/tap/initiate", { email });
-      navigate("/tap-wait");
+      /* ===============================
+         PEER USERS
+         =============================== */
+      if (decision.recovery_mode === "peer") {
+        setIsPeerUser(true);
 
+        const res = await post("/recover/start", { email });
+        localStorage.setItem("threshold", res.threshold);
+
+        if (method === "qr") {
+          logEvent({
+            type: "recovery_method_selected",
+            flowId: FLOW_ID,
+            stepId: STEP_ID,
+            method: "qr",
+          });
+          navigate("/scan");
+        }
+
+        if (method === "tap") {
+          logEvent({
+            type: "recovery_method_selected",
+            flowId: FLOW_ID,
+            stepId: STEP_ID,
+            method: "tap",
+          });
+
+          await post("/recover/tap/initiate", { email });
+          navigate("/tap-wait");
+        }
       }
+
     } catch (err) {
       logEvent({
         type: "recovery_error",
@@ -80,33 +109,45 @@ export default function RecoveryPage() {
         <AdaptiveInput
           placeholder="Account Email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           style={{ marginBottom: "15px" }}
         />
 
-        <div style={{ marginBottom: "15px" }}>
-          <AdaptiveLabel style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
-            <input
-              type="radio"
-              checked={method === "qr"}
-              onChange={() => setMethod("qr")}
-              style={{ marginRight: "8px" }}
-            />
-            Recover by scanning peer QR codes
-          </AdaptiveLabel>
+        {/* Peer-only options */}
+        {isPeerUser && (
+          <div style={{ marginBottom: "15px" }}>
+            <AdaptiveLabel style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+              <input
+                type="radio"
+                checked={method === "qr"}
+                onChange={() => setMethod("qr")}
+                style={{ marginRight: "8px" }}
+              />
+              Recover by scanning peer QR codes
+            </AdaptiveLabel>
 
-          <AdaptiveLabel style={{ display: "flex", alignItems: "center" }}>
-            <input
-              type="radio"
-              checked={method === "tap"}
-              onChange={() => setMethod("tap")}
-              style={{ marginRight: "8px" }}
-            />
-            Recover using Tap-Yes peer approval
-          </AdaptiveLabel>
-        </div>
+            <AdaptiveLabel style={{ display: "flex", alignItems: "center" }}>
+              <input
+                type="radio"
+                checked={method === "tap"}
+                onChange={() => setMethod("tap")}
+                style={{ marginRight: "8px" }}
+              />
+              Recover using Tap-Yes peer approval
+            </AdaptiveLabel>
+          </div>
+        )}
 
-        <AdaptiveButton onClick={startRecovery}>Continue</AdaptiveButton>
+        <AdaptiveButton onClick={startRecovery}>
+          Continue
+        </AdaptiveButton>
+
+        <AdaptiveButton
+          style={{ background: "#eee", color: "#333" }}
+          onClick={() => navigate("/")}
+        >
+          Back to Login
+        </AdaptiveButton>
       </div>
     </div>
   );

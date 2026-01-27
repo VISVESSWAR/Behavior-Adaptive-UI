@@ -32,32 +32,41 @@ router.post("/", async (req, res) => {
       peers
     } = req.body;
 
-    // 🔐 Hash password (for both modes)
+    if (!email || !password || !mode) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // 🔐 Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // ============================
-    // OPTION A — NORMAL SIGNUP
-    // ============================
+    /* ============================
+       OPTION A — NORMAL USER (EMAIL OTP)
+       ============================ */
     if (mode === "password") {
       await pool.query(
         `INSERT INTO users (email, password_hash, recovery_mode)
-         VALUES ($1,$2,'password')
+         VALUES ($1,$2,'otp')
          ON CONFLICT (email) DO NOTHING`,
         [email, passwordHash]
       );
 
-      return res.json({ success: true });
+      return res.json({
+        success: true,
+        message: "Account created with email OTP recovery"
+      });
     }
 
-    // ============================
-    // OPTION B — PEER RECOVERY
-    // ============================
+    /* ============================
+       OPTION B — PEER RECOVERY
+       ============================ */
     if (mode === "peer") {
-      if (peers.length !== numPeers)
+      if (!Array.isArray(peers) || peers.length !== numPeers) {
         return res.status(400).json({ error: "Peer count mismatch" });
+      }
 
-      if (threshold > numPeers)
-        return res.status(400).json({ error: "k cannot be > n" });
+      if (threshold > numPeers) {
+        return res.status(400).json({ error: "Threshold cannot exceed peers" });
+      }
 
       // 🔍 Verify peers exist
       for (const peerEmail of peers) {
@@ -65,7 +74,7 @@ router.post("/", async (req, res) => {
           "SELECT email FROM users WHERE email=$1",
           [peerEmail]
         );
-        if (peer.rowCount === 0) {
+        if (!peer.rowCount) {
           return res.status(400).json({
             error: `Peer not registered: ${peerEmail}`
           });
@@ -87,15 +96,12 @@ router.post("/", async (req, res) => {
       // 🔀 Shamir split
       const shares = shamirSplit(masterKey, numPeers, threshold);
 
-      // 📦 Assign ONE share per peer
+      // 📦 Assign one share per peer
       for (let i = 0; i < peers.length; i++) {
-        const peerEmail = peers[i];
-        const share = shares[i];
-
         await pool.query(
           `INSERT INTO shares (owner_email, peer_email, x, y)
            VALUES ($1,$2,$3,$4)`,
-          [email, peerEmail, share.x, share.y]
+          [email, peers[i], shares[i].x, shares[i].y]
         );
       }
 
@@ -105,7 +111,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    res.status(400).json({ error: "Invalid signup mode" });
+    return res.status(400).json({ error: "Invalid signup mode" });
 
   } catch (err) {
     console.error("Signup error:", err);

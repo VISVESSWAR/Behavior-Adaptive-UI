@@ -1,9 +1,11 @@
 import { post } from "../api";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles.css";
 
 export default function FinishRecoveryPage() {
   const [status, setStatus] = useState("Recovering...");
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function finish() {
@@ -16,24 +18,24 @@ export default function FinishRecoveryPage() {
           return;
         }
 
-        const res = await post("/recover/finish", {
+        await post("/recover/finish", {
           email,
           shares
         });
 
-        if (res.success) {
-          setStatus("Account recovered successfully!");
-          // optional: redirect to reset password
-        } else {
-          setStatus("Recovery failed: Invalid shares");
-        }
+        // ✅ Clear used recovery material
+        localStorage.removeItem("shares");
+
+        // ✅ Go to common password reset page
+        navigate("/reset-password");
+
       } catch (err) {
-        setStatus(err.message);
+        setStatus(err.message || "Recovery failed");
       }
     }
 
     finish();
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="page">

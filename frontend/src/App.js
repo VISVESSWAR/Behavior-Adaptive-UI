@@ -5,15 +5,26 @@ import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
 import { AdaptationDebugger } from "./components/AdaptationDebugger";
 
+/* =========================
+   AUTH & CORE PAGES
+   ========================= */
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage from "./pages/HomePage";
-import RecoveryPage from "./pages/RecoveryPage";
-import TapWaitPage from "./pages/TapWaitPage";
-import ScanPage from "./pages/ScanQRPage";       // QR scanning page
-import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // optional
+
+/* =========================
+   RECOVERY PAGES
+   ========================= */
+import RecoveryPage from "./pages/RecoveryPage";          // choose method
+import OtpRecoverPage from "./pages/OtpRecoverPage";      // OTP input only
+import ScanQRPage from "./pages/ScanQRPage";              // QR scan
+import TapWaitPage from "./pages/TapWaitPage";            // waiting for peers
+import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // reset password
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+
 
 export default function App() {
+  // Global UX instrumentation
   useMouseTracker("global", "app");
   useIdleTimer("global", "app");
   useScrollDepth("global", "app");
@@ -22,6 +33,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {/* Optional debug / persona header */}
       <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
         <div style={{ fontSize: "12px", color: "#666" }}>
           Current Persona:{" "}
@@ -31,18 +43,27 @@ export default function App() {
 
       <main>
         <Routes>
-          {/* Auth */}
+          {/* ================= AUTH ================= */}
           <Route path="/" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Main Dashboard */}
+          {/* ================= DASHBOARD ================= */}
           <Route path="/home" element={<HomePage />} />
 
-          {/* Recovery Flow */}
+          {/* ================= RECOVERY FLOW ================= */}
+          {/* Step 0: choose recovery method */}
           <Route path="/recover" element={<RecoveryPage />} />
-          <Route path="/scan" element={<ScanPage />} />
+
+          {/* OTP-based recovery */}
+          <Route path="/otp-recover" element={<OtpRecoverPage />} />
+
+          {/* Peer-based recovery */}
+          <Route path="/scan" element={<ScanQRPage />} />
           <Route path="/tap-wait" element={<TapWaitPage />} />
+
+          {/* Final step (COMMON to all methods) */}
           <Route path="/finish" element={<FinishRecoveryPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
       </main>
 
