@@ -1,25 +1,28 @@
 import { useState, useEffect } from "react";
 import { post } from "../api";
+import { useNavigate } from "react-router-dom";
 import useMouseTracker from "../hooks/useMouseTracker";
 import useIdleTimer from "../hooks/useIdleTimer";
 import { logEvent } from "../logging/eventLogger";
 import AdaptiveInput from "../components/AdaptiveInput";
 import AdaptiveButton from "../components/AdaptiveButton";
-import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
+import { AdaptiveHeading } from "../components/AdaptiveText";
 import "../styles.css";
 
 const FLOW_ID = "authentication";
 const STEP_ID = "signup";
 
 export default function SignupPage() {
-  const [mode, setMode] = useState("password");
+  const navigate = useNavigate();
+
+  const [mode, setMode] = useState("password"); // password | peer
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [numPeers, setNumPeers] = useState(3);
   const [threshold, setThreshold] = useState(2);
   const [peers, setPeers] = useState(["", "", ""]);
 
-  // Metrics collection for this page
+  // Metrics collection
   useMouseTracker(FLOW_ID, STEP_ID);
   useIdleTimer(FLOW_ID, STEP_ID);
 
@@ -56,7 +59,8 @@ export default function SignupPage() {
         mode,
       });
 
-      alert("Signup successful. You can login now.");
+      alert("Signup successful. Please login.");
+      navigate("/"); // redirect to LoginPage
     } catch (err) {
       logEvent({
         type: "signup_error",
@@ -73,8 +77,12 @@ export default function SignupPage() {
       <div className="card">
         <AdaptiveHeading level={2}>Signup</AdaptiveHeading>
 
-        <select value={mode} onChange={(e) => setMode(e.target.value)}>
-          <option value="password">Normal Signup</option>
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          style={{ marginBottom: "10px" }}
+        >
+          <option value="password">Normal Signup (Email OTP Recovery)</option>
           <option value="peer">Peer-based Recovery</option>
         </select>
 
@@ -92,6 +100,7 @@ export default function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        {/* PEER-BASED RECOVERY CONFIG */}
         {mode === "peer" && (
           <>
             <AdaptiveInput
@@ -104,6 +113,7 @@ export default function SignupPage() {
                 setPeers(Array(n).fill(""));
               }}
             />
+
             <AdaptiveInput
               type="number"
               placeholder="Threshold (k)"
@@ -128,6 +138,21 @@ export default function SignupPage() {
         )}
 
         <AdaptiveButton onClick={signup}>Signup</AdaptiveButton>
+
+        {/* BACK TO LOGIN */}
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            marginTop: "10px",
+            background: "transparent",
+            border: "none",
+            color: "#007bff",
+            cursor: "pointer",
+            textDecoration: "underline"
+          }}
+        >
+          ← Back to Login
+        </button>
       </div>
     </div>
   );

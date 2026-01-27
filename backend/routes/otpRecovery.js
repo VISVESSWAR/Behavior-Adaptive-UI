@@ -46,12 +46,6 @@ router.post("/otp/start", async (req, res) => {
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpHash = await bcrypt.hash(otp, 10);
-  console.log("====================================");
-  console.log("🔐 OTP GENERATED");
-  console.log("📧 Email:", email);
-  console.log("🔑 OTP :", otp);
-  console.log("⏰ Valid for: 5 minutes");
-  console.log("====================================");
 
   await pool.query("DELETE FROM otp_codes WHERE email=$1", [email]);
 
@@ -87,7 +81,7 @@ router.post("/otp/verify", async (req, res) => {
     return res.status(400).json({ error: "Invalid OTP" });
   }
 
-  // ✅ Mark recovery session as verified
+  // ✅ Mark recovery session
   await pool.query(
     `INSERT INTO recovery_sessions (email, verified, expires_at)
      VALUES ($1,true, NOW() + INTERVAL '10 minutes')
@@ -110,7 +104,9 @@ router.post("/start", async (req, res) => {
   const { email } = req.body;
 
   const result = await pool.query(
-    "SELECT commitment, threshold FROM users WHERE email=$1 AND recovery_mode='peer'",
+    `SELECT commitment, threshold
+     FROM users
+     WHERE email=$1 AND recovery_mode='peer'`,
     [email]
   );
 
@@ -126,12 +122,18 @@ router.post("/finish", async (req, res) => {
   const { email, shares } = req.body;
 
   const userRes = await pool.query(
-    "SELECT commitment FROM users WHERE email=$1",
+    `SELECT commitment
+     FROM users
+     WHERE email=$1 AND recovery_mode='peer'`,
     [email]
   );
 
   if (!userRes.rowCount) {
-    return res.status(404).json({ error: "User not found" });
+    return res.status(404).json({ error: "Peer recovery not enabled" });
+  }
+
+  if (!Array.isArray(shares) || shares.length === 0) {
+    return res.status(400).json({ error: "Shares required" });
   }
 
   const masterKey = lagrange(shares);
@@ -141,7 +143,7 @@ router.post("/finish", async (req, res) => {
     return res.status(400).json({ error: "Invalid share set" });
   }
 
-  // ✅ Mark recovery session as verified
+  // ✅ Mark recovery session
   await pool.query(
     `INSERT INTO recovery_sessions (email, verified, expires_at)
      VALUES ($1,true, NOW() + INTERVAL '10 minutes')
@@ -220,11 +222,23 @@ router.post("/tap/respond", requireAuth, async (req, res) => {
 router.get("/tap/shares/:owner", async (req, res) => {
   const owner = req.params.owner;
 
+  // 🔒 Ensure recovery session exists
+  const session = await pool.query(
+    `SELECT verified
+     FROM recovery_sessions
+     WHERE email=$1 AND verified=true AND expires_at > NOW()`,
+    [owner]
+  );
+
+  if (!session.rowCount) {
+    return res.status(403).json({ error: "Recovery not verified" });
+  }
+
   const sharesRes = await pool.query(
     `SELECT s.x, s.y
      FROM shares s
      JOIN recovery_requests r
-     ON s.peer_email = r.peer_email
+       ON s.peer_email = r.peer_email
      WHERE r.owner_email=$1 AND r.status='approved'`,
     [owner]
   );
