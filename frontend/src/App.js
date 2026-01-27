@@ -1,19 +1,20 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useRef } from "react";
-import { useUIConfig } from "./adaptation/UIContext";
 import { useTask } from "./task/TaskContext";
+import { MetricsProvider, useMetricsCollector } from "./context/MetricsContext";
 import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
+import { usePersona } from "./persona/usePersona";
 import { AdaptationDebugger } from "./components/AdaptationDebugger";
+import Navbar from "./components/Navbar";
 import MetricsCollector from "./utils/metricsCollectorSimplified";
 
-/* =========================
-   AUTH & CORE PAGES
-   ========================= */
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage from "./pages/HomePage";
+import TransactionPage from "./pages/TransactionPage";
+import DashboardPage from "./pages/DashboardPage";
 
 /* =========================
    RECOVERY PAGES
@@ -25,15 +26,18 @@ import TapWaitPage from "./pages/TapWaitPage"; // waiting for peers
 import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // reset password
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-export default function App() {
+// Internal app component that uses MetricsProvider
+function AppContent() {
   const metricsCollectorRef = useRef(null);
   const task = useTask();
+  const { metricsCollectorRef: contextCollectorRef } = useMetricsCollector();
 
   // Initialize global metrics collector on mount
   useEffect(() => {
     const sessionId = Date.now();
     const metricsCollector = new MetricsCollector(sessionId, "global", "app");
     metricsCollectorRef.current = metricsCollector;
+    contextCollectorRef.current = metricsCollector;
     console.log(
       `[App] Initialized MetricsCollector with sessionId: ${sessionId}`,
     );
@@ -63,11 +67,51 @@ export default function App() {
   ]);
 
   // Global UX instrumentation
-  useMouseTracker("global", "app");
+  const metrics = useMouseTracker("global", "app");
   useIdleTimer("global", "app");
   useScrollDepth("global", "app");
 
-  const { persona } = useUIConfig();
+  // Get persona from metrics
+  const persona = usePersona(metrics);
+
+  // Update metrics in collector
+  useEffect(() => {
+    if (metricsCollectorRef.current && metrics) {
+      metricsCollectorRef.current.updateMetrics(metrics);
+    }
+  }, [metrics]);
+
+  // Update persona in collector
+  useEffect(() => {
+    if (metricsCollectorRef.current && persona) {
+      metricsCollectorRef.current.updatePersona(persona);
+    }
+  }, [persona]);
+
+  // Collect snapshot every 10 seconds (check every second)
+  useEffect(() => {
+    if (!metricsCollectorRef.current) return;
+
+    const timer = setInterval(() => {
+      if (
+        metricsCollectorRef.current &&
+        metricsCollectorRef.current.shouldCollect()
+      ) {
+        const snapshot = metricsCollectorRef.current.collectSnapshot();
+        if (snapshot) {
+          console.log("[App] Snapshot collected:", {
+            timestamp: new Date(snapshot.timestamp).toLocaleTimeString(),
+            persona:
+              snapshot.persona?.persona || snapshot.persona?.type || "unknown",
+            action: snapshot.action,
+            totalSnapshots: metricsCollectorRef.current.snapshots.length,
+          });
+        }
+      }
+    }, 1000); // Check every second if 10s has passed
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <BrowserRouter>
@@ -78,6 +122,9 @@ export default function App() {
         </div>
       </header>
 
+      {/* Navigation Bar */}
+      <Navbar />
+
       <main>
         <Routes>
           {/* ================= AUTH ================= */}
@@ -86,6 +133,10 @@ export default function App() {
 
           {/* ================= DASHBOARD ================= */}
           <Route path="/home" element={<HomePage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* ================= TRANSACTION ================= */}
+          <Route path="/transaction" element={<TransactionPage />} />
 
           {/* ================= RECOVERY FLOW ================= */}
           {/* Step 0: choose recovery method */}
@@ -106,5 +157,13 @@ export default function App() {
 
       <AdaptationDebugger />
     </BrowserRouter>
+  );
+}
+
+export default function App() {
+  return (
+    <MetricsProvider>
+      <AppContent />
+    </MetricsProvider>
   );
 }

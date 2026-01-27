@@ -5,7 +5,7 @@ export function logEvent(e) {
 
   logs.push({
     ts: Date.now(),
-    ...e
+    ...e,
   });
 
   localStorage.setItem(KEY, JSON.stringify(logs));
@@ -13,6 +13,10 @@ export function logEvent(e) {
 
 export function getLogs() {
   return JSON.parse(localStorage.getItem(KEY) || "[]");
+}
+
+export function getRawLogs() {
+  return getLogs();
 }
 
 export function clearLogs() {
