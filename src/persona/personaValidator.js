@@ -7,7 +7,12 @@ export class PersonaValidator {
 
   update(rawPersona, confidence) {
     if (confidence < this.minConfidence) {
-      return { persona: rawPersona, stable: false };
+      return {
+        persona: rawPersona,
+        type: rawPersona,
+        stable: false,
+        confidence: confidence,
+      };
     }
 
     this.history.push(rawPersona);
@@ -17,19 +22,21 @@ export class PersonaValidator {
     }
 
     const counts = {};
-    this.history.forEach(p => {
+    this.history.forEach((p) => {
       counts[p] = (counts[p] || 0) + 1;
     });
 
     const finalPersona = Object.keys(counts).reduce((a, b) =>
-      counts[a] > counts[b] ? a : b
+      counts[a] > counts[b] ? a : b,
     );
 
     const stability = counts[finalPersona] / this.history.length;
 
     return {
       persona: finalPersona,
-      stable: stability >= 0.6
+      type: finalPersona,
+      stable: stability >= 0.6,
+      confidence: confidence,
     };
   }
 }

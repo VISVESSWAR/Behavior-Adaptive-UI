@@ -14,10 +14,10 @@ import useScrollDepth from "../hooks/useScrollDepth";
 import { logEvent } from "../logging/eventLogger";
 
 const SERVICES = [
-  { id: 1, name: "Money Transfer", price: "$25.00", icon: "💸" },
-  { id: 2, name: "Bill Payment", price: "$15.00", icon: "📄" },
-  { id: 3, name: "Purchase", price: "$50.00", icon: "🛍️" },
-  { id: 4, name: "Subscription", price: "$9.99", icon: "📦" },
+  { id: 1, name: "Money Transfer", price: "$25.00" },
+  { id: 2, name: "Bill Payment", price: "$15.00" },
+  { id: 3, name: "Purchase", price: "$50.00" },
+  { id: 4, name: "Subscription", price: "$9.99" },
 ];
 
 export default function Transaction() {
@@ -82,7 +82,6 @@ export default function Transaction() {
                 onClick={() => handleServiceSelect(service)}
                 className="card-base text-center hover:border-blue-500 hover:border-2 transform hover:scale-105"
               >
-                <div className="text-4xl mb-3">{service.icon}</div>
                 <AdaptiveHeading level={3} className="text-gray-900 mb-2">
                   {service.name}
                 </AdaptiveHeading>

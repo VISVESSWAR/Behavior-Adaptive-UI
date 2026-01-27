@@ -11,6 +11,7 @@ import {
   AdaptiveLink,
 } from "../components/AdaptiveText";
 import AdaptiveButton from "../components/AdaptiveButton";
+import { MetricsExportPanel } from "../components/MetricsExportPanel";
 
 function fmt(v, d = 2) {
   return typeof v === "number" ? v.toFixed(d) : "0.00";
@@ -69,35 +70,29 @@ export default function Dashboard() {
             {
               label: "Total Clicks",
               value: metrics.s_num_clicks || 0,
-              icon: "🖱️",
             },
             {
               label: "Session Duration",
               value: `${fmt(metrics.s_session_duration)}s`,
-              icon: "⏱️",
             },
             {
               label: "Mouse Distance",
               value: fmt(metrics.s_total_distance),
-              icon: "📍",
             },
-            { label: "Idle Time", value: `${fmt(idleTime)}s`, icon: "😴" },
+            { label: "Idle Time", value: `${fmt(idleTime)}s` },
             {
               label: "Velocity Mean",
               value: fmt(metrics.s_vel_mean),
-              icon: "🚀",
             },
             {
               label: "Misclicks",
               value: metrics.s_num_misclicks || 0,
-              icon: "❌",
             },
             {
               label: "Scroll Depth",
               value: `${fmt(scrollDepth * 100, 1)}%`,
-              icon: "📜",
             },
-            { label: "Actions", value: metrics.s_num_actions || 0, icon: "✋" },
+            { label: "Actions", value: metrics.s_num_actions || 0 },
           ].map((item, idx) => (
             <div key={idx} className="card-base">
               <div className="flex items-start justify-between">
@@ -109,7 +104,6 @@ export default function Dashboard() {
                     {item.value}
                   </p>
                 </div>
-                <span className="text-4xl">{item.icon}</span>
               </div>
             </div>
           ))}
@@ -215,7 +209,20 @@ export default function Dashboard() {
       )}
 
       {/* === ACTION BUTTONS === */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap mb-8">
+        <AdaptiveButton
+          onClick={() => {
+            if (window.__metricsCollector) {
+              window.__metricsCollector.completeFlow();
+              console.log("[Dashboard] Flow marked as complete");
+              alert("Session flow completed and saved!");
+            }
+          }}
+          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+        >
+          Complete Session
+        </AdaptiveButton>
+
         <AdaptiveLink
           as={Link}
           to="/login"
@@ -238,6 +245,9 @@ export default function Dashboard() {
           Back to Home
         </AdaptiveLink>
       </div>
+
+      {/* === METRICS EXPORT PANEL === */}
+      <MetricsExportPanel />
     </div>
   );
 }

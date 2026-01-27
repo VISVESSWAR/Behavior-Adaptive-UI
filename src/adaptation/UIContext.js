@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { applyAction } from "./applyAction";
 import { getActionsForPersona } from "./personaActionMapper";
+import { getActionId } from "./actionSpace";
 
 const UIContext = createContext();
 
 // Default UI state
 const DEFAULT_UI_STATE = {
   buttonSize: 1,
-  textSize: 4,
+  textSize: 2,
   fontWeight: 2,
   spacing: 1,
   borderRadius: 3,
@@ -56,6 +57,12 @@ export function UIProvider({ children, persona = null }) {
       actions.forEach((action) => {
         adaptedConfig = applyAction(adaptedConfig, action);
         console.log(`[UI Adaptation] Applied action: ${action}`);
+
+        // Record each automatic action to metrics collector
+        if (window.__metricsCollector) {
+          const actionId = getActionId(action);
+          window.__metricsCollector.recordAction(actionId);
+        }
       });
 
       // Update UI config with all adaptations
@@ -66,6 +73,12 @@ export function UIProvider({ children, persona = null }) {
   // Apply an action to update UI state
   const dispatchAction = (action) => {
     setUIConfig((prevConfig) => applyAction(prevConfig, action));
+
+    // Record action in metrics collector if available
+    if (window.__metricsCollector) {
+      window.__metricsCollector.recordAction(action);
+      console.log(`[UIContext] Action recorded: ${action}`);
+    }
   };
 
   return (
