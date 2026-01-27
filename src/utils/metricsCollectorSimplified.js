@@ -9,6 +9,7 @@
  */
 
 import { snapshotToStateVector, TransitionBuilder } from "./snapshotSchema.js";
+import IndexedDBManager from "./indexedDBManager.js";
 
 export class MetricsCollector {
   constructor(sessionId, flowId, stepId) {
@@ -22,6 +23,12 @@ export class MetricsCollector {
     this.currentAction = -1; // No action yet
     this.currentPersona = null;
     this.currentUIState = null;
+    this.dbManager = new IndexedDBManager();
+    this.dbManager
+      .init()
+      .catch((err) =>
+        console.error("[MetricsCollector] Failed to init DB", err),
+      );
   }
 
   /**
@@ -97,15 +104,56 @@ export class MetricsCollector {
     this.snapshots.push(snapshot);
     this.lastCollectionTime = Date.now();
 
+    // Save to IndexedDB for persistence
+    this.dbManager
+      .saveTransition({
+        ...snapshot,
+        state: this.buildStateVector(this.windowMetrics, this.currentPersona),
+        next_state: this.buildStateVector(
+          this.windowMetrics,
+          this.currentPersona,
+        ),
+        reward: 0,
+      })
+      .catch((err) =>
+        console.error("[MetricsCollector] Failed to save snapshot", err),
+      );
+
     console.log(
       `[MetricsCollector] Snapshot collected: ${this.snapshots.length} total`,
       {
-        persona: this.currentPersona.type,
+        persona: this.currentPersona?.persona || this.currentPersona?.type,
         action: this.currentAction,
       },
     );
 
     return snapshot;
+  }
+
+  /**
+   * Build state vector matching DQN format
+   */
+  buildStateVector(metrics, persona) {
+    if (!metrics || !persona) return null;
+
+    const personaType = persona.persona || persona.type || "intermediate";
+    return {
+      s_session_duration: metrics.s_session_duration || 0,
+      s_total_distance: metrics.s_total_distance || 0,
+      s_num_actions: metrics.s_num_actions || 0,
+      s_num_clicks: metrics.s_num_clicks || 0,
+      s_mean_time_per_action: metrics.s_mean_time_per_action || 0,
+      s_vel_mean: metrics.s_vel_mean || 0,
+      s_vel_std: metrics.s_vel_std || 0,
+      s_accel_mean: metrics.s_accel_mean || 0,
+      s_accel_std: metrics.s_accel_std || 0,
+      s_curve_mean: metrics.s_curve_mean || 0,
+      s_curve_std: metrics.s_curve_std || 0,
+      s_jerk_mean: metrics.s_jerk_mean || 0,
+      s_persona_novice_old: personaType === "novice_old" ? 1.0 : 0.0,
+      s_persona_intermediate: personaType === "intermediate" ? 1.0 : 0.0,
+      s_persona_expert: personaType === "expert" ? 1.0 : 0.0,
+    };
   }
 
   /**

@@ -220,6 +220,14 @@ class IndexedDBManager {
   }
 
   /**
+   * Get all records (alias for getAllTransitions)
+   * Used for generic data retrieval
+   */
+  async getAll() {
+    return this.getAllTransitions();
+  }
+
+  /**
    * Get all sessions
    */
   async getAllSessions() {

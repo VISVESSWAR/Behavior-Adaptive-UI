@@ -117,29 +117,42 @@ export function snapshotToStateVector(snapshot) {
   const m = snapshot.metrics;
   const p = snapshot.persona;
 
+  // Persona type (handle both .type and .persona fields)
+  const personaType = p.type || p.persona || "intermediate";
+
   // Persona one-hot encoding
   const personaOneHot = {
-    s_persona_novice_old: p.type === "novice_old" ? 1.0 : 0.0,
-    s_persona_intermediate: p.type === "intermediate" ? 1.0 : 0.0,
-    s_persona_expert: p.type === "expert" ? 1.0 : 0.0,
+    s_persona_novice_old: personaType === "novice_old" ? 1.0 : 0.0,
+    s_persona_intermediate: personaType === "intermediate" ? 1.0 : 0.0,
+    s_persona_expert: personaType === "expert" ? 1.0 : 0.0,
   };
 
-  // 15-column state vector
-  return {
-    s_session_duration: m.session_duration || 0,
-    s_total_distance: m.total_distance || 0,
-    s_num_actions: m.num_actions || 0,
-    s_num_clicks: m.num_clicks || 0,
-    s_mean_time_per_action: m.mean_time_per_action || 0,
-    s_vel_mean: m.vel_mean || 0,
-    s_vel_std: m.vel_std || 0,
-    s_accel_mean: m.accel_mean || 0,
-    s_accel_std: m.accel_std || 0,
-    s_curve_mean: m.curve_mean || 0,
-    s_curve_std: m.curve_std || 0,
-    s_jerk_mean: m.jerk_mean || 0,
+  // Extract metrics - handle both with and without s_ prefix
+  const getMetric = (key) => {
+    return m[`s_${key}`] !== undefined ? m[`s_${key}`] : m[key] || 0;
+  };
+
+  // Normalize metrics to 0-1 scale for DQN
+  const normalized = {
+    s_session_duration: Math.min(getMetric("session_duration") / 300, 1.0), // Max 5 mins = 300s
+    s_total_distance: Math.min(getMetric("total_distance") / 20000, 1.0), // Max 20k pixels
+    s_num_actions: Math.min(getMetric("num_actions") / 500, 1.0), // Max 500 actions
+    s_num_clicks: Math.min(getMetric("num_clicks") / 100, 1.0), // Max 100 clicks
+    s_mean_time_per_action: Math.min(
+      getMetric("mean_time_per_action") / 3,
+      1.0,
+    ), // Max 3s per action
+    s_vel_mean: Math.min(getMetric("vel_mean") / 2000, 1.0), // Max 2000 px/s
+    s_vel_std: Math.min(getMetric("vel_std") / 1500, 1.0), // Max 1500 std
+    s_accel_mean: Math.min(Math.abs(getMetric("accel_mean")) / 1000, 1.0), // Max 1000 px/s² (absolute)
+    s_accel_std: Math.min(getMetric("accel_std") / 10000, 1.0), // Max 10k std
+    s_curve_mean: Math.min(getMetric("curve_mean") / 0.5, 1.0), // Max 0.5
+    s_curve_std: Math.min(getMetric("curve_std") / 0.5, 1.0), // Max 0.5
+    s_jerk_mean: Math.min(Math.abs(getMetric("jerk_mean")) / 1000, 1.0), // Max 1000 px/s³ (absolute)
     ...personaOneHot,
   };
+
+  return normalized;
 }
 
 /**

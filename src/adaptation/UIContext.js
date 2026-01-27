@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { applyAction } from "./applyAction";
 import { getActionsForPersona } from "./personaActionMapper";
+import { getActionId } from "./actionSpace";
 
 const UIContext = createContext();
 
@@ -56,6 +57,12 @@ export function UIProvider({ children, persona = null }) {
       actions.forEach((action) => {
         adaptedConfig = applyAction(adaptedConfig, action);
         console.log(`[UI Adaptation] Applied action: ${action}`);
+
+        // Record each automatic action to metrics collector
+        if (window.__metricsCollector) {
+          const actionId = getActionId(action);
+          window.__metricsCollector.recordAction(actionId);
+        }
       });
 
       // Update UI config with all adaptations
