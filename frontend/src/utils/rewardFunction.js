@@ -5,6 +5,62 @@
  * Uses same persona factors and thresholds as DQN model training
  */
 
+/**
+ * Compare two snapshots to detect meaningful state changes
+ *
+ * @param {Object} prev - previous snapshot
+ * @param {Object} curr - current snapshot
+ * @returns {boolean} true if significant change detected
+ */
+export function isStateDifferent(prev, curr) {
+  if (!prev || !curr) return true;
+
+  const THRESHOLD = 0.01; // 1% change threshold
+
+  // Check metrics - compare numeric values in prev.metrics vs curr.metrics
+  if (prev.metrics && curr.metrics) {
+    for (const key in curr.metrics) {
+      const prevVal = prev.metrics[key] || 0;
+      const currVal = curr.metrics[key] || 0;
+
+      // For numeric values, check if difference exceeds threshold
+      if (typeof currVal === "number" && typeof prevVal === "number") {
+        const maxVal = Math.max(Math.abs(prevVal), Math.abs(currVal), 1);
+        const diff = Math.abs(currVal - prevVal) / maxVal;
+
+        if (diff > THRESHOLD) {
+          return true; // Significant change in this metric
+        }
+      }
+    }
+  }
+
+  // Check persona change
+  const prevPersona = prev.persona?.type || prev.persona || "intermediate";
+  const currPersona = curr.persona?.type || curr.persona || "intermediate";
+
+  if (prevPersona !== currPersona) {
+    return true; // Persona changed
+  }
+
+  // Check UI state change
+  if (prev.uiState && curr.uiState) {
+    for (const key in curr.uiState) {
+      if (prev.uiState[key] !== curr.uiState[key]) {
+        return true; // UI state changed
+      }
+    }
+  } else if (
+    (prev.uiState && !curr.uiState) ||
+    (!prev.uiState && curr.uiState)
+  ) {
+    return true; // One has uiState, the other doesn't
+  }
+
+  // No significant change detected
+  return false;
+}
+
 const P = {
   persona_factor: {
     novice_old: 1.6,

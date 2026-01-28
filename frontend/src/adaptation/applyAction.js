@@ -5,7 +5,7 @@ import {
   SPACING_LEVELS,
 } from "./uiVariants";
 
-export function applyAction(uiState, action) {
+export function applyAction(uiState, action, persona = null) {
   const next = { ...uiState };
 
   switch (action) {
@@ -48,6 +48,15 @@ export function applyAction(uiState, action) {
     default:
       break;
   }
+
+  // Log action application with persona and updated config
+  const personaStr = persona ? ` [${persona}]` : "";
+  console.log(`[applyAction]${personaStr} Applied action: ${action}`, {
+    action,
+    persona,
+    previousConfig: uiState,
+    updatedConfig: next,
+  });
 
   return next;
 }

@@ -7,7 +7,7 @@ const UIContext = createContext();
 // Default UI state
 const DEFAULT_UI_STATE = {
   buttonSize: 1,
-  textSize: 4,
+  textSize: 5,
   fontWeight: 2,
   spacing: 1,
   borderRadius: 3,
@@ -41,31 +41,39 @@ export function UIProvider({ children, persona = null }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(uiConfig));
   }, [uiConfig]);
 
-  // Apply automatic persona-based adaptation when persona changes
+  // Apply automatic persona-based adaptation when persona changes and becomes stable
   useEffect(() => {
-    if (persona && persona.stable) {
-      // Pass both persona AND metrics to action mapper for RL-based decisions
-      const actions = getActionsForPersona(persona.persona, persona.metrics);
+    if (persona && persona.stable && persona.type) {
+      const personaType = persona.type || persona.persona;
+
+      // Get recommended actions based on stable persona and metrics
+      const actions = getActionsForPersona(personaType, persona.metrics);
       console.log(
-        `[UI Adaptation] Persona detected: ${persona.persona} (confidence: ${persona.confidence})`,
-        actions,
+        `[UI Adaptation] Persona stable: ${personaType} (confidence: ${persona.confidence?.toFixed(2) || "N/A"})`,
+        { persona, recommendedActions: actions },
       );
 
-      // Apply each action sequentially
-      let adaptedConfig = uiConfig;
+      // Apply each action sequentially to UI config
+      let adaptedConfig = { ...uiConfig };
       actions.forEach((action) => {
-        adaptedConfig = applyAction(adaptedConfig, action);
-        console.log(`[UI Adaptation] Applied action: ${action}`);
+        adaptedConfig = applyAction(adaptedConfig, action, personaType);
       });
 
-      // Update UI config with all adaptations
-      setUIConfig(adaptedConfig);
+      // Update UI config with all persona-based adaptations
+      if (JSON.stringify(adaptedConfig) !== JSON.stringify(uiConfig)) {
+        console.log(
+          `[UI Adaptation] UI config updated for persona: ${personaType}`,
+          { previousConfig: uiConfig, newConfig: adaptedConfig },
+        );
+        setUIConfig(adaptedConfig);
+      }
     }
-  }, [persona?.persona, persona?.stable, persona?.metrics]); // Trigger when persona or metrics change
+  }, [persona?.type, persona?.stable, persona?.metrics]); // Trigger when persona type changes or becomes stable
 
-  // Apply an action to update UI state
-  const dispatchAction = (action) => {
-    setUIConfig((prevConfig) => applyAction(prevConfig, action));
+  // Apply an action to update UI state (can be called manually or from persona adaptation)
+  const dispatchAction = (action, actionPersona = null) => {
+    const personaStr = actionPersona || persona?.type || null;
+    setUIConfig((prevConfig) => applyAction(prevConfig, action, personaStr));
   };
 
   return (

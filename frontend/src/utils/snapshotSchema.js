@@ -5,8 +5,11 @@
  * 1. Frontend collects ONE snapshot every 10s (metrics + persona + action)
  * 2. Store snapshots chronologically in IndexedDB
  * 3. Build CSV by pairing consecutive snapshots
- * 4. Compute rewards from (s_t, a_t, s_{t+1})
+ * 4. Compute rewards from (s_t, a_t, s_{t+1}) + task rewards
  */
+
+import { isStateDifferent, computeReward } from "./rewardFunction";
+import { computeTaskReward } from "./taskReward";
 
 /**
  * SNAPSHOT SCHEMA (what gets collected in frontend)
@@ -176,35 +179,60 @@ export class TransitionBuilder {
     }
 
     const transitions = [];
+    let skippedCount = 0;
 
     // Pair consecutive snapshots
     for (let i = 0; i < snapshots.length - 1; i++) {
       const snapshot_t = snapshots[i];
       const snapshot_t1 = snapshots[i + 1];
 
+      // Skip if state didn't change significantly
+      if (!isStateDifferent(snapshot_t, snapshot_t1)) {
+        skippedCount++;
+        console.debug(
+          `[TransitionBuilder] Skipping transition ${i}: state unchanged`,
+        );
+        continue;
+      }
+
       // Build state vectors
       const s_t = snapshotToStateVector(snapshot_t);
       const s_t1 = snapshotToStateVector(snapshot_t1);
 
       if (!s_t || !s_t1) {
-        console.warn(`[TransitionBuilder] Skipping pair ${i}`);
+        console.warn(
+          `[TransitionBuilder] Skipping pair ${i}: invalid state vector`,
+        );
         continue;
       }
 
       // Action taken at time t
       const a_t = snapshot_t.action || 0;
 
-      // Reward from transition
-      const r_t = rewardFn ? rewardFn(s_t, a_t, s_t1) : 0.0;
+      // Compute behavior reward from interaction/UI metrics
+      const r_behavior = rewardFn
+        ? rewardFn(s_t, a_t, s_t1)
+        : computeReward(s_t, a_t, s_t1);
+
+      // Compute task-specific reward from task completion metrics
+      const r_task = computeTaskReward(snapshot_t1.task);
+
+      // Combine rewards: 70% behavior, 30% task
+      const r_total = 0.7 * r_behavior + 0.3 * r_task;
+
+      // Clip combined reward to [-1.0, 1.0]
+      const r_combined = Math.max(-1.0, Math.min(1.0, r_total));
 
       // Done flag
       const done = snapshot_t1.done ? 1 : 0;
 
-      // Build transition
+      // Build transition with all reward components
       const transition = {
         s: s_t,
         a: a_t,
-        r: r_t,
+        r: r_combined, // Combined reward for training
+        r_behavior, // Behavior/interaction reward (for analysis)
+        r_task, // Task completion reward (for analysis)
         s_prime: s_t1,
         done: done,
         metadata: {
@@ -219,7 +247,7 @@ export class TransitionBuilder {
     }
 
     console.log(
-      `[TransitionBuilder] Built ${transitions.length} transitions from ${snapshots.length} snapshots`,
+      `[TransitionBuilder] Built ${transitions.length} transitions from ${snapshots.length} snapshots (${skippedCount} skipped due to unchanged state)`,
     );
     return transitions;
   }
@@ -260,7 +288,9 @@ export class TransitionBuilder {
     const header = [
       ...stateColumns,
       "action",
-      "reward",
+      "reward_behavior",
+      "reward_task",
+      "reward_combined",
       ...nextStateColumns,
       "done",
     ];
@@ -272,9 +302,15 @@ export class TransitionBuilder {
         (t.s_prime[col] ?? 0).toFixed(6),
       );
 
-      return [...s_values, t.a, t.r.toFixed(6), ...s_prime_values, t.done].join(
-        ",",
-      );
+      return [
+        ...s_values,
+        t.a,
+        (t.r_behavior ?? t.r).toFixed(6), // behavior reward
+        (t.r_task ?? 0).toFixed(6), // task reward
+        t.r.toFixed(6), // combined reward
+        ...s_prime_values,
+        t.done,
+      ].join(",");
     });
 
     const csv = [header.join(","), ...rows].join("\n");

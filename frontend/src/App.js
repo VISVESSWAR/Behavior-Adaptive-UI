@@ -6,6 +6,7 @@ import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
 import { usePersona } from "./persona/usePersona";
+import { useUIConfig } from "./adaptation/UIContext";
 import { AdaptationDebugger } from "./components/AdaptationDebugger";
 import Navbar from "./components/Navbar";
 import MetricsCollector from "./utils/metricsCollectorSimplified";
@@ -74,6 +75,9 @@ function AppContent() {
   // Get persona from metrics
   const persona = usePersona(metrics);
 
+  // Get current UI configuration
+  const { uiConfig } = useUIConfig();
+
   // Update metrics in collector
   useEffect(() => {
     if (metricsCollectorRef.current && metrics) {
@@ -87,6 +91,22 @@ function AppContent() {
       metricsCollectorRef.current.updatePersona(persona);
     }
   }, [persona]);
+
+  // Update UI state and persona confidence in collector
+  useEffect(() => {
+    if (metricsCollectorRef.current) {
+      // Pass current UI variant configuration
+      metricsCollectorRef.current.updateUIState(uiConfig);
+
+      // Also store persona confidence for context
+      if (persona && persona.confidence) {
+        metricsCollectorRef.current.personaConfidence = persona.confidence;
+        console.log(
+          `[App] Updated collector context: persona=${persona.type || persona.persona}, confidence=${persona.confidence.toFixed(2)}, uiConfig=${JSON.stringify(uiConfig)}`,
+        );
+      }
+    }
+  }, [uiConfig, persona?.confidence]);
 
   // Collect snapshot every 10 seconds (check every second)
   useEffect(() => {

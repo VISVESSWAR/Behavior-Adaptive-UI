@@ -24,6 +24,7 @@ export class MetricsCollector {
     this.currentPersona = null;
     this.currentUIState = null;
     this.currentTaskData = null; // Task tracking data
+    this.personaConfidence = null; // Store persona confidence separately
     this.dbManager = new IndexedDBManager();
     this.dbManager
       .init()
@@ -133,7 +134,13 @@ export class MetricsCollector {
 
       metrics: { ...this.windowMetrics },
 
-      persona: { ...this.currentPersona },
+      persona: {
+        ...this.currentPersona,
+        confidence:
+          this.personaConfidence !== null
+            ? this.personaConfidence
+            : this.currentPersona?.confidence,
+      },
 
       action: this.currentAction, // Action that was just applied
 
