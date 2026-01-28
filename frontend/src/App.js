@@ -6,7 +6,7 @@ import useMouseTracker from "./hooks/useMouseTracker";
 import useIdleTimer from "./hooks/useIdleTimer";
 import useScrollDepth from "./hooks/useScrollDepth";
 import { usePersona } from "./persona/usePersona";
-import { useUIConfig } from "./adaptation/UIContext";
+import { UIProvider, useUIConfig } from "./adaptation/UIContext";
 import { AdaptationDebugger } from "./components/AdaptationDebugger";
 import Navbar from "./components/Navbar";
 import MetricsCollector from "./utils/metricsCollectorSimplified";
@@ -27,7 +27,7 @@ import TapWaitPage from "./pages/TapWaitPage"; // waiting for peers
 import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // reset password
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-// Internal app component that uses MetricsProvider
+// Internal app component that uses MetricsProvider & UIProvider
 function AppContent() {
   const metricsCollectorRef = useRef(null);
   const task = useTask();
@@ -35,17 +35,22 @@ function AppContent() {
 
   // Initialize global metrics collector on mount
   useEffect(() => {
-    const sessionId = Date.now();
-    const metricsCollector = new MetricsCollector(sessionId, "global", "app");
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const metricsCollector = new MetricsCollector(sessionId, "app", "main");
     metricsCollectorRef.current = metricsCollector;
     contextCollectorRef.current = metricsCollector;
+    window.__metricsCollector = metricsCollector;
     console.log(
       `[App] Initialized MetricsCollector with sessionId: ${sessionId}`,
     );
     return () => {
       console.log("[App] MetricsCollector cleanup");
+      if (metricsCollectorRef.current) {
+        metricsCollectorRef.current.completeFlow();
+      }
+      delete window.__metricsCollector;
     };
-  }, []);
+  }, [contextCollectorRef]);
 
   // Sync task data with MetricsCollector
   useEffect(() => {
@@ -67,7 +72,7 @@ function AppContent() {
     task.pathSequence.length,
   ]);
 
-  // Global UX instrumentation
+  // Global UX instrumentation - these hooks track metrics globally
   const metrics = useMouseTracker("global", "app");
   useIdleTimer("global", "app");
   useScrollDepth("global", "app");
@@ -78,7 +83,7 @@ function AppContent() {
   // Get current UI configuration
   const { uiConfig } = useUIConfig();
 
-  // Update metrics in collector
+  // Update metrics in collector EVERY render (so idle time is always tracked)
   useEffect(() => {
     if (metricsCollectorRef.current && metrics) {
       metricsCollectorRef.current.updateMetrics(metrics);
@@ -92,13 +97,10 @@ function AppContent() {
     }
   }, [persona]);
 
-  // Update UI state and persona confidence in collector
+  // Update UI state in collector
   useEffect(() => {
     if (metricsCollectorRef.current) {
-      // Pass current UI variant configuration
       metricsCollectorRef.current.updateUIState(uiConfig);
-
-      // Also store persona confidence for context
       if (persona && persona.confidence) {
         metricsCollectorRef.current.personaConfidence = persona.confidence;
         console.log(
@@ -135,15 +137,20 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      {/* Optional debug / persona header */}
-      <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
-        <div style={{ fontSize: "12px", color: "#666" }}>
-          Current Persona: <strong>{persona?.persona || "loading..."}</strong>
-        </div>
-      </header>
+      <UIProvider persona={persona}>
+        {/* Header with persona info */}
+        <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            Current Persona: <strong>{persona?.type || "loading..."}</strong> |
+            Status: {persona?.stable ? "Stable" : "Learning..."}
+          </div>
+        </header>
 
-      {/* Navigation Bar */}
-      <Navbar />
+        {/* Navigation Bar */}
+        <Navbar />
+
+        {/* Adaptation Debugger */}
+        <AdaptationDebugger />
 
       <main>
         <Routes>
@@ -174,8 +181,7 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
       </main>
-
-      <AdaptationDebugger />
+      </UIProvider>
     </BrowserRouter>
   );
 }
@@ -187,3 +193,4 @@ export default function App() {
     </MetricsProvider>
   );
 }
+ 

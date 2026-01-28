@@ -8,7 +8,17 @@ import { useUIConfig } from "../adaptation/UIContext";
 export function AdaptationDebugger() {
   const { persona, uiConfig } = useUIConfig();
 
-  if (!persona) return null;
+  // Debug: log persona status
+  console.log("[AdaptationDebugger] Persona:", persona);
+
+  if (!persona) {
+    return (
+      <div className="fixed bottom-4 right-4 bg-red-900 bg-opacity-75 text-white text-xs p-3 rounded-lg max-w-sm z-40 font-mono">
+        <div className="font-bold mb-2">⚠️ Waiting for Persona Detection...</div>
+        <div>Persona is loading. Please interact with the page.</div>
+      </div>
+    );
+  }
 
   const m = persona.metrics;
 
@@ -19,7 +29,7 @@ export function AdaptationDebugger() {
       {/* Persona Info */}
       <div className="mb-2 border-b border-gray-500 pb-2">
         <div>
-          👤 Persona: <span className="font-bold">{persona.persona}</span>
+          👤 Persona: <span className="font-bold">{persona.persona || persona.type}</span>
         </div>
         <div>✓ Stable: {persona.stable ? "Yes ✅" : "No ⏳"}</div>
         <div>🎯 Confidence: {(persona.confidence * 100).toFixed(0)}%</div>

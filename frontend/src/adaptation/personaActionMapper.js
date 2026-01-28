@@ -18,35 +18,35 @@ export function getActionsForPersona(persona, metrics = null) {
   // === METRIC-SPECIFIC RULES (Simulated RL model) ===
   // These rules simulate what an RL/DQN model would learn
   if (metrics) {
-    // Rule 1: High misclicks → increase button size for easier clicking
+    // Rule 1: High misclicks => increase button size for easier clicking
     if (metrics.misclicks > 0.4) {
-      actions.push(ACTION_SPACE[2]); // button_up
+      actions.push(ACTION_SPACE[1]); // button_up
       console.log(
-        `[RL Simulation] High misclicks (${(metrics.misclicks * 100).toFixed(0)}%) → button_up`,
+        `[RL Simulation] High misclicks (${(metrics.misclicks * 100).toFixed(0)}%) => button_up`,
       );
     }
 
-    // Rule 2: Long idle time → increase text size (help with vision)
-    if (metrics.idle > 0.5) {
+    // Rule 2: Long idle time => increase text size (help with vision)
+    if (metrics.idle > 0.8) {
       actions.push(ACTION_SPACE[3]); // text_up
       console.log(
-        `[RL Simulation] High idle time (${(metrics.idle * 100).toFixed(0)}%) → text_up`,
+        `[RL Simulation] High idle time (${(metrics.idle * 100).toFixed(0)}%) => text_up`,
       );
     }
 
-    // Rule 3: High hesitation → increase spacing for clarity
-    if (metrics.hesitation > 0.5) {
+    // Rule 3: High hesitation => increase spacing for clarity
+    if (metrics.hesitation > 0.3) {
       actions.push(ACTION_SPACE[7]); // spacing_up
       console.log(
-        `[RL Simulation] High hesitation (${(metrics.hesitation * 100).toFixed(0)}%) → spacing_up`,
+        `[RL Simulation] High hesitation (${(metrics.hesitation * 100).toFixed(0)}%) => spacing_up`,
       );
     }
 
-    // Rule 4: Low velocity (slow movements) → enable tooltips for guidance
+    // Rule 4: Low velocity (slow movements) => enable tooltips for guidance
     if (metrics.vel_mean < 0.3) {
       actions.push(ACTION_SPACE[9]); // enable_tooltips
       console.log(
-        `[RL Simulation] Low velocity (${(metrics.vel_mean * 100).toFixed(0)}%) → enable_tooltips`,
+        `[RL Simulation] Low velocity (${(metrics.vel_mean * 100).toFixed(0)}%) => enable_tooltips`,
       );
     }
 
@@ -61,7 +61,7 @@ export function getActionsForPersona(persona, metrics = null) {
     case "novice_old":
       // Novice/elderly users need: larger buttons, larger text, more spacing, tooltips
       return [
-        ACTION_SPACE[2], // button_up (make buttons bigger)
+        ACTION_SPACE[1], // button_up (make buttons bigger)
         ACTION_SPACE[3], // text_up (increase text size)
         ACTION_SPACE[7], // spacing_up (more padding)
         ACTION_SPACE[9], // enable_tooltips (help with navigation)
@@ -70,7 +70,7 @@ export function getActionsForPersona(persona, metrics = null) {
     case "expert":
       // Expert users prefer: compact UI, smaller text, minimal spacing, no tooltips
       return [
-        ACTION_SPACE[1], // button_down (compact buttons)
+        ACTION_SPACE[2], // button_down (compact buttons)
         ACTION_SPACE[4], // text_down (smaller text)
         ACTION_SPACE[8], // spacing_down (minimal padding)
         // no tooltips for experts

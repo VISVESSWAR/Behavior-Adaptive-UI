@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { euclideanDistance, curvature } from "../utils/metrics";
 import { logEvent } from "../logging/eventLogger";
+import useIdleTimer from "./useIdleTimer";
+import useScrollDepth from "./useScrollDepth";
 
 export default function useMouseTracker(flowId, stepId) {
   const startTime = useRef(performance.now());
   const prev = useRef(null);
   const prevPrev = useRef(null);
+
+  // Get idle time and scroll depth from other hooks
+  const idleTime = useIdleTimer(flowId, stepId);
+  const scrollDepth = useScrollDepth(flowId, stepId);
 
   const accum = useRef({
     totalDistance: 0,
@@ -141,7 +147,14 @@ export default function useMouseTracker(flowId, stepId) {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("click", handleClick);
     };
-  }, [flowId, stepId]);
+  }, [flowId, stepId, idleTime, scrollDepth]);
 
-  return metrics;
+  // Merge idle time and scroll depth into metrics
+  const mergedMetrics = {
+    ...metrics,
+    s_idle_time: idleTime,
+    s_scroll_depth: scrollDepth,
+  };
+
+  return mergedMetrics;
 }
