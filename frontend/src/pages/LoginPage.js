@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { post } from "../api";
 import { useNavigate, Link } from "react-router-dom";
-import useMouseTracker from "../hooks/useMouseTracker";
-import useIdleTimer from "../hooks/useIdleTimer";
 import { logEvent } from "../logging/eventLogger";
 import { useTask } from "../task/TaskContext";
 import AdaptiveInput from "../components/AdaptiveInput";
@@ -18,10 +16,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const nav = useNavigate();
   const task = useTask();
-
-  // Metrics collection for this page
-  useMouseTracker(FLOW_ID, STEP_ID);
-  useIdleTimer(FLOW_ID, STEP_ID);
 
   // Start task on mount
   useEffect(() => {

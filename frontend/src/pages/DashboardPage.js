@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { useMetricsCollector } from "../context/MetricsContext";
-import useMouseTracker from "../hooks/useMouseTracker";
-import useIdleTimer from "../hooks/useIdleTimer";
-import useScrollDepth from "../hooks/useScrollDepth";
 import IndexedDBManager from "../utils/indexedDBManager";
 import { TransitionBuilder } from "../utils/snapshotSchema";
 import { computeReward } from "../utils/rewardFunction";
@@ -14,22 +11,15 @@ function fmt(v, d = 2) {
 }
 
 export default function DashboardPage() {
-  const flowId = "dashboard";
-  const [stepId, setStepId] = useState("view_metrics");
-
-  // Get real-time metrics from hooks (updated as user interacts)
-  const metrics = useMouseTracker(flowId, stepId);
-  const idleTime = useIdleTimer(flowId, stepId);
-  const scrollDepth = useScrollDepth(flowId, stepId);
-
-  // Get MetricsCollector instance from context
+  // Get MetricsCollector instance from context (READ ONLY - no tracking)
   const { metricsCollectorRef } = useMetricsCollector();
 
   // State for dashboard display
   const [snapshotCount, setSnapshotCount] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
+  const [currentMetrics, setCurrentMetrics] = useState({});
 
-  // Fetch metrics summary from collector and DB
+  // Fetch and subscribe to metrics from global collector
   useEffect(() => {
     const fetchMetricsSummary = async () => {
       try {
@@ -37,6 +27,12 @@ export default function DashboardPage() {
           const collector = metricsCollectorRef.current;
           const snapCount = collector.snapshots.length;
           setSnapshotCount(snapCount);
+          
+          // Read current metrics from the global collector's window metrics
+          if (collector.windowMetrics) {
+            setCurrentMetrics(collector.windowMetrics);
+          }
+          
           console.log("[DashboardPage] Collector snapshots:", snapCount);
         }
 
@@ -51,7 +47,7 @@ export default function DashboardPage() {
     };
 
     fetchMetricsSummary();
-    const interval = setInterval(fetchMetricsSummary, 5000); // Refresh every 5s
+    const interval = setInterval(fetchMetricsSummary, 1000); // Refresh every 1s for real-time display
     return () => clearInterval(interval);
   }, [metricsCollectorRef]);
 
@@ -160,7 +156,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#0066cc" }}
           >
-            {metrics.s_num_clicks || 0}
+            {currentMetrics?.s_num_clicks || 0}
           </AdaptiveHeading>
         </div>
 
@@ -182,7 +178,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#00aa00" }}
           >
-            {fmt(metrics.s_session_duration)}s
+            {fmt(currentMetrics?.s_session_duration)}s
           </AdaptiveHeading>
         </div>
 
@@ -204,7 +200,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#ff9900" }}
           >
-            {fmt(metrics.s_total_distance)} px
+            {fmt(currentMetrics?.s_total_distance)} px
           </AdaptiveHeading>
         </div>
 
@@ -226,7 +222,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#cc0066" }}
           >
-            {fmt(idleTime)}s
+            {fmt(currentMetrics?.s_idle_time)}s
           </AdaptiveHeading>
         </div>
 
@@ -248,7 +244,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#0066cc" }}
           >
-            {fmt(metrics.s_vel_mean)} px/ms
+            {fmt(currentMetrics?.s_vel_mean)} px/ms
           </AdaptiveHeading>
         </div>
 
@@ -270,7 +266,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#ff6600" }}
           >
-            {metrics.s_num_misclicks || 0}
+            {currentMetrics?.s_num_misclicks || 0}
           </AdaptiveHeading>
         </div>
 
@@ -292,7 +288,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#00aa00" }}
           >
-            {fmt(scrollDepth * 100, 1)}%
+            {fmt((currentMetrics?.s_scroll_depth || 0) * 100, 1)}%
           </AdaptiveHeading>
         </div>
 
@@ -314,7 +310,7 @@ export default function DashboardPage() {
             level={3}
             style={{ margin: "10px 0 0 0", color: "#0066cc" }}
           >
-            {metrics.s_num_actions || 0}
+            {currentMetrics?.s_num_actions || 0}
           </AdaptiveHeading>
         </div>
       </div>

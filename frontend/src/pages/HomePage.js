@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-import useMouseTracker from "../hooks/useMouseTracker";
-import useIdleTimer from "../hooks/useIdleTimer";
-import useScrollDepth from "../hooks/useScrollDepth";
 import { logEvent } from "../logging/eventLogger";
 import AdaptiveButton from "../components/AdaptiveButton";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
@@ -16,10 +13,6 @@ export default function HomePage() {
   const [peers, setPeers] = useState([]);
   const [requests, setRequests] = useState([]);   // ✅ NEW
   const [loading, setLoading] = useState(false);
-
-  useMouseTracker(FLOW_ID, STEP_ID);
-  useIdleTimer(FLOW_ID, STEP_ID);
-  useScrollDepth(FLOW_ID, STEP_ID);
 
   useEffect(() => {
     logEvent({

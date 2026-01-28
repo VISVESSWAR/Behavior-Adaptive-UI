@@ -166,7 +166,7 @@ function AppContent() {
           <Route path="/otp-recover" element={<OtpRecoverPage />} />
 
           {/* Peer-based recovery */}
-          <Route path="/scan" element={<ScanQRPage />} />
+          <Route path="/scan-qr" element={<ScanQRPage />} />
           <Route path="/tap-wait" element={<TapWaitPage />} />
 
           {/* Final step (COMMON to all methods) */}

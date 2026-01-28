@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { post } from "../api";
 import { useNavigate } from "react-router-dom";
-import useMouseTracker from "../hooks/useMouseTracker";
-import useIdleTimer from "../hooks/useIdleTimer";
 import { logEvent } from "../logging/eventLogger";
 import AdaptiveInput from "../components/AdaptiveInput";
 import AdaptiveButton from "../components/AdaptiveButton";
@@ -23,9 +21,6 @@ export default function SignupPage() {
   const [peers, setPeers] = useState(["", "", ""]);
 
   // Metrics collection
-  useMouseTracker(FLOW_ID, STEP_ID);
-  useIdleTimer(FLOW_ID, STEP_ID);
-
   useEffect(() => {
     logEvent({
       type: "page_view",

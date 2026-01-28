@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { post } from "../api";
 import { useNavigate } from "react-router-dom";
-import useMouseTracker from "../hooks/useMouseTracker";
-import useIdleTimer from "../hooks/useIdleTimer";
-import useScrollDepth from "../hooks/useScrollDepth";
 import { logEvent } from "../logging/eventLogger";
 import AdaptiveButton from "../components/AdaptiveButton";
 import AdaptiveInput from "../components/AdaptiveInput";
@@ -11,92 +8,93 @@ import { AdaptiveHeading, AdaptiveLabel } from "../components/AdaptiveText";
 import "../styles.css";
 
 const FLOW_ID = "recovery";
-const STEP_ID = "start";
 
 export default function RecoveryPage() {
   const [email, setEmail] = useState("");
-  const [method, setMethod] = useState("qr"); // qr | tap
-  const [isPeerUser, setIsPeerUser] = useState(false);
+  const [step, setStep] = useState("email"); // email | method
+  const [selectedMethod, setSelectedMethod] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  useMouseTracker(FLOW_ID, STEP_ID);
-  useIdleTimer(FLOW_ID, STEP_ID);
-  useScrollDepth(FLOW_ID, STEP_ID);
+  async function validateEmail() {
+    if (!email.trim()) {
+      alert("Please enter your email address");
+      return;
+    }
 
-  async function startRecovery() {
     try {
+      setLoading(true);
+      
       logEvent({
-        type: "recovery_started",
+        type: "recovery_email_submitted",
         flowId: FLOW_ID,
-        stepId: STEP_ID,
+        stepId: "email",
+        email,
         timestamp: new Date().toISOString(),
       });
 
-      /* ===============================
-         STEP 0: Decide recovery mode
-         =============================== */
+      // Check email and get recovery mode options
       const decision = await post("/recover/decide", { email });
 
-      // ✅ GLOBAL STATE FOR ALL RECOVERY STEPS
+      // Store email globally for next steps
       localStorage.setItem("email", email);
       localStorage.setItem("recovery_mode", decision.recovery_mode);
 
-      /* ===============================
-         OTP USERS
-         =============================== */
-      if (decision.recovery_mode === "otp") {
-        logEvent({
-          type: "recovery_method_selected",
-          flowId: FLOW_ID,
-          stepId: STEP_ID,
-          method: "otp",
-        });
-
-        await post("/recover/otp/start", { email });
-        navigate("/otp-recover");
-        return;
-      }
-
-      /* ===============================
-         PEER USERS
-         =============================== */
-      if (decision.recovery_mode === "peer") {
-        setIsPeerUser(true);
-
-        const res = await post("/recover/start", { email });
-        localStorage.setItem("threshold", res.threshold);
-
-        if (method === "qr") {
-          logEvent({
-            type: "recovery_method_selected",
-            flowId: FLOW_ID,
-            stepId: STEP_ID,
-            method: "qr",
-          });
-          navigate("/scan");
-        }
-
-        if (method === "tap") {
-          logEvent({
-            type: "recovery_method_selected",
-            flowId: FLOW_ID,
-            stepId: STEP_ID,
-            method: "tap",
-          });
-
-          await post("/recover/tap/initiate", { email });
-          navigate("/tap-wait");
-        }
-      }
+      // Move to method selection
+      setStep("method");
     } catch (err) {
       logEvent({
-        type: "recovery_error",
+        type: "recovery_email_error",
         flowId: FLOW_ID,
-        stepId: STEP_ID,
+        stepId: "email",
         error: err.message,
       });
       alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMethodSelection(method) {
+    try {
+      setLoading(true);
+      setSelectedMethod(method);
+
+      logEvent({
+        type: "recovery_method_selected",
+        flowId: FLOW_ID,
+        stepId: "method",
+        method: method,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Route based on selected method
+      if (method === "email") {
+        await post("/recover/otp/start", { email });
+        navigate("/otp-recover");
+      } else if (method === "qr") {
+        const res = await post("/recover/start", { email });
+        localStorage.setItem("threshold", res.threshold);
+        navigate("/scan-qr");
+      } else if (method === "tap") {
+        const res = await post("/recover/start", { email });
+        localStorage.setItem("threshold", res.threshold);
+        await post("/recover/tap/initiate", { email });
+        navigate("/tap-wait");
+      }
+    } catch (err) {
+      logEvent({
+        type: "recovery_method_error",
+        flowId: FLOW_ID,
+        stepId: "method",
+        method: method,
+        error: err.message,
+      });
+      alert(err.message);
+      setSelectedMethod(null);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -105,73 +103,122 @@ export default function RecoveryPage() {
       <div className="card">
         <AdaptiveHeading level={2}>Account Recovery</AdaptiveHeading>
 
-        <AdaptiveInput
-          placeholder="Account Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onFocus={() =>
-            logEvent({ type: "focus_email", flowId: FLOW_ID, stepId: STEP_ID })
-          }
-          style={{ marginBottom: "15px" }}
-        />
+        {/* ========== STEP 1: EMAIL ENTRY ========== */}
+        {step === "email" && (
+          <>
+            <AdaptiveLabel style={{ marginBottom: "10px" }}>
+              Enter your account email address
+            </AdaptiveLabel>
 
-        {/* Peer-only options */}
-        {isPeerUser && (
-          <div style={{ marginBottom: "15px" }}>
-            <AdaptiveLabel
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "10px",
+            <AdaptiveInput
+              placeholder="Account Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() =>
+                logEvent({
+                  type: "focus_email",
+                  flowId: FLOW_ID,
+                  stepId: "email",
+                })
+              }
+              style={{ marginBottom: "20px" }}
+            />
+            
+            <AdaptiveButton
+              onClick={validateEmail}
+              disabled={loading}
+              style={{ marginBottom: "10px" }}
+            >
+              {loading ? "Validating..." : "Next"}
+            </AdaptiveButton>
+
+            <AdaptiveButton
+              style={{ background: "#eee", color: "#333" }}
+              onClick={() => {
+                logEvent({
+                  type: "click_back_button",
+                  flowId: FLOW_ID,
+                  stepId: "email",
+                });
+                navigate("/");
               }}
             >
-              <input
-                type="radio"
-                checked={method === "qr"}
-                onChange={() => setMethod("qr")}
-                style={{ marginRight: "8px" }}
-              />
-              Recover by scanning peer QR codes
-            </AdaptiveLabel>
-
-            <AdaptiveLabel style={{ display: "flex", alignItems: "center" }}>
-              <input
-                type="radio"
-                checked={method === "tap"}
-                onChange={() => setMethod("tap")}
-                style={{ marginRight: "8px" }}
-              />
-              Recover using Tap-Yes peer approval
-            </AdaptiveLabel>
-          </div>
+              Back to Login
+            </AdaptiveButton>
+          </>
         )}
 
-        <AdaptiveButton
-          onClick={() => {
-            logEvent({
-              type: "click_continue_button",
-              flowId: FLOW_ID,
-              stepId: STEP_ID,
-            });
-            startRecovery();
-          }}
-        >
-          Continue
-        </AdaptiveButton>
+        {/* ========== STEP 2: METHOD SELECTION ========== */}
+        {step === "method" && (
+          <>
+            <AdaptiveLabel style={{ marginBottom: "20px" }}>
+              <strong>Choose your recovery method:</strong>
+            </AdaptiveLabel>
 
-        <AdaptiveButton
-          style={{ background: "#eee", color: "#333" }}
-          onClick={() => {
-            logEvent({
-              type: "click_back_button",
-              flowId: FLOW_ID,
-              stepId: STEP_ID,
-            });
-            navigate("/");
-          }}
-        >
-          Back to Login
-        </AdaptiveButton>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
+              <AdaptiveButton
+                onClick={() => handleMethodSelection("email")}
+                disabled={loading}
+                style={{
+                  padding: "15px",
+                  textAlign: "left",
+                  opacity: selectedMethod === "email" ? 0.7 : 1,
+                }}
+              >
+                📧 Recover via Email OTP
+                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                  We'll send a code to your email
+                </div>
+              </AdaptiveButton>
+
+              <AdaptiveButton
+                onClick={() => handleMethodSelection("qr")}
+                disabled={loading}
+                style={{
+                  padding: "15px",
+                  textAlign: "left",
+                  opacity: selectedMethod === "qr" ? 0.7 : 1,
+                }}
+              >
+                📱 Recover via QR Scan
+                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                  Scan codes from your recovery peers
+                </div>
+              </AdaptiveButton>
+
+              <AdaptiveButton
+                onClick={() => handleMethodSelection("tap")}
+                disabled={loading}
+                style={{
+                  padding: "15px",
+                  textAlign: "left",
+                  opacity: selectedMethod === "tap" ? 0.7 : 1,
+                }}
+              >
+                👥 Peer Approval (Tap Yes)
+                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                  Your peers approve your recovery
+                </div>
+              </AdaptiveButton>
+            </div>
+
+            <AdaptiveButton
+              style={{ background: "#eee", color: "#333" }}
+              onClick={() => {
+                logEvent({
+                  type: "click_back_button",
+                  flowId: FLOW_ID,
+                  stepId: "method",
+                });
+                setStep("email");
+                setSelectedMethod(null);
+              }}
+              disabled={loading}
+            >
+              Back
+            </AdaptiveButton>
+          </>
+        )}
       </div>
     </div>
   );
