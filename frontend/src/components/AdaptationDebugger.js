@@ -1,15 +1,16 @@
 /**
  * Debug component to visualize UI adaptation in real-time
- * Shows persona detection, metrics, and applied UI changes
+ * Shows persona detection, metrics, applied UI changes, and DQN predictions
  */
 
 import { useUIConfig } from "../adaptation/UIContext";
+import { ACTION_SPACE } from "../adaptation/actionSpace";
 
 export function AdaptationDebugger() {
-  const { persona, uiConfig } = useUIConfig();
+  const { persona, uiConfig, dqnAction, dqnLoading } = useUIConfig();
 
   // Debug: log persona status
-  console.log("[AdaptationDebugger] Persona:", persona);
+  console.log("[AdaptationDebugger] Persona:", persona, "DQN Action:", dqnAction);
 
   if (!persona) {
     return (
@@ -21,6 +22,7 @@ export function AdaptationDebugger() {
   }
 
   const m = persona.metrics;
+  const actionName = dqnAction >= 0 && dqnAction <= 9 ? Object.values(ACTION_SPACE)[dqnAction] : "none";
 
   return (
     <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white text-xs p-3 rounded-lg max-w-sm z-40 font-mono">
@@ -35,6 +37,21 @@ export function AdaptationDebugger() {
         <div>🎯 Confidence: {(persona.confidence * 100).toFixed(0)}%</div>
       </div>
 
+      {/* DQN Status */}
+      <div className="mb-2 border-b border-gray-500 pb-2">
+        <div className="font-semibold mb-1">🤖 DQN Model:</div>
+        <div>
+          Status: {dqnLoading ? "⏳ Predicting..." : "✅ Ready"}
+        </div>
+        <div>
+          Action: {dqnAction >= 0 ? (
+            <span className="text-green-300">{dqnAction} ({actionName})</span>
+          ) : (
+            <span className="text-yellow-300">Using rules</span>
+          )}
+        </div>
+      </div>
+
       {/* Metrics (RL Input) */}
       {m && (
         <div className="mb-2 border-b border-gray-500 pb-2 text-xs">
@@ -45,7 +62,7 @@ export function AdaptationDebugger() {
           </div>
           <div>
             😴 Idle Time: {(m.idle * 100).toFixed(0)}%
-            {m.idle > 0.5 && " ⚠️ High"}
+            {m.idle > 0.3 && " ⚠️ High"}
           </div>
           <div>
             🤔 Hesitation: {(m.hesitation * 100).toFixed(0)}%
@@ -69,7 +86,7 @@ export function AdaptationDebugger() {
       </div>
 
       <div className="text-xs mt-2 text-gray-400">
-        RL-based UI adaptation active
+        🧠 DQN + Rule-based adaptation active
       </div>
     </div>
   );

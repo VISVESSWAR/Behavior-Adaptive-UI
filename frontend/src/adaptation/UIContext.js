@@ -21,8 +21,10 @@ const DEFAULT_UI_STATE = {
 
 const STORAGE_KEY = "ui_preferences";
 
-export function UIProvider({ children, persona = null }) {
+export function UIProvider({ children, persona = null, metrics = null }) {
   const [uiConfig, setUIConfig] = useState(DEFAULT_UI_STATE);
+  const [dqnAction, setDQNAction] = useState(-1);
+  const [dqnLoading, setDQNLoading] = useState(false);
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -42,21 +44,54 @@ export function UIProvider({ children, persona = null }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(uiConfig));
   }, [uiConfig]);
 
-  // Apply automatic persona-based adaptation when persona changes
+  // Monitor DQN action from MetricsCollector
+  // DQN action is fetched at snapshot time (every 10 seconds)
   useEffect(() => {
-    if (persona && persona.stable) {
-      // Pass both persona AND metrics to action mapper for RL-based decisions
-      const actions = getActionsForPersona(persona.persona || persona.type, persona.metrics);
-      console.log(
-        `[UI Adaptation] Persona detected: ${persona.persona || persona.type} (confidence: ${persona.confidence})`,
-        actions,
-      );
+    if (!window.__metricsCollector) return;
 
-      // Apply each action sequentially
+    const checkDQNAction = setInterval(() => {
+      const dqn = window.__metricsCollector.currentDQNAction;
+      if (dqn !== undefined && dqn !== null && dqn !== dqnAction) {
+        setDQNAction(dqn);
+        console.log(`[UIContext] DQN action updated from collector: ${dqn}`);
+      }
+    }, 500); // Check every 500ms for new DQN action
+
+    return () => clearInterval(checkDQNAction);
+  }, [dqnAction]);
+
+  // Apply automatic persona-based adaptation
+  // CRITICAL: Only adapt when DQN action changes (every 10 seconds with snapshot)
+  // Fallback to rule-based if DQN unavailable
+  useEffect(() => {
+    if (!persona || !persona.stable) return;
+
+    let actions = [];
+
+    // PRIORITY 1: Use DQN model prediction if available (fetched at snapshot time)
+    if (dqnAction >= 0 && dqnAction <= 9) {
+      actions = [dqnAction];
+      console.log(
+        `[UI Adaptation] Using DQN action: ${dqnAction} for persona ${persona.persona || persona.type}`,
+      );
+    } 
+    // PRIORITY 2: Fallback to rule-based actions
+    else {
+      actions = getActionsForPersona(persona.persona || persona.type, persona.metrics);
+      console.log(
+        `[UI Adaptation] Persona detected: ${persona.persona || persona.type} (confidence: ${persona.confidence?.toFixed(2)})`,
+        `Using ${actions.length} rule-based actions`,
+      );
+    }
+
+    // Apply each action sequentially
+    if (actions.length > 0) {
       let adaptedConfig = { ...uiConfig };
       actions.forEach((action) => {
         adaptedConfig = applyAction(adaptedConfig, action);
-        console.log(`[UI Adaptation] Applied action: ${action}`);
+        console.log(
+          `[Current UI State] Applied action: ${action} | buttonSize: ${adaptedConfig.buttonSize}, textSize: ${adaptedConfig.textSize}, spacing: ${adaptedConfig.spacing}, tooltips: ${adaptedConfig.tooltips}`,
+        );
 
         // Record each automatic action to metrics collector
         if (window.__metricsCollector) {
@@ -68,22 +103,22 @@ export function UIProvider({ children, persona = null }) {
       // Update UI config with all adaptations
       setUIConfig(adaptedConfig);
     }
-  }, [persona?.persona, persona?.type, persona?.stable, persona?.metrics]); // Trigger when persona or metrics change
+  }, [persona?.stable, persona?.type, dqnAction]);
 
-  // Apply an action to update UI state
+  // Apply an action to update UI state (manual dispatch)
   const dispatchAction = (action) => {
     setUIConfig((prevConfig) => applyAction(prevConfig, action));
 
     // Record action in metrics collector if available
     if (window.__metricsCollector) {
       window.__metricsCollector.recordAction(action);
-      console.log(`[UIContext] Action recorded: ${action}`);
+      console.log(`[UIContext] Manual action recorded: ${action}`);
     }
   };
 
   return (
     <UIContext.Provider
-      value={{ uiConfig, setUIConfig, dispatchAction, persona }}
+      value={{ uiConfig, setUIConfig, dispatchAction, persona, dqnAction, dqnLoading }}
     >
       {children}
     </UIContext.Provider>

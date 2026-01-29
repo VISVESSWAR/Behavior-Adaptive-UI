@@ -1,0 +1,23 @@
+{
+  "model_path": "/content/drive/MyDrive/Dev/dqn_mouse_rl_model_v6.keras",
+  "state_cols": [
+    "s_session_duration",
+    "s_total_distance",
+    "s_num_actions",
+    "s_num_clicks",
+    "s_mean_time_per_action",
+    "s_vel_mean",
+    "s_vel_std",
+    "s_accel_mean",
+    "s_accel_std",
+    "s_curve_mean",
+    "s_curve_std",
+    "s_jerk_mean",
+    "s_persona_novice_old",
+    "s_persona_intermediate",
+    "s_persona_expert"
+  ],
+  "scaler_path": "/content/drive/MyDrive/Dev/dqn_state_scaler_v2.pkl",
+  "algorithm": "Double DQN + Target Network",
+  "persona_reward_shaping": true
+}

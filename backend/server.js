@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-dotenv.config();
-
 import { initDB } from "./db.js";
 import { router as signupRoute } from "./routes/signup.js";
 import { router as peerRoute } from "./routes/peer.js";
 import { router as home } from "./routes/home.js";
 import { router as auth } from "./routes/auth.js";
 import { router as recovery } from "./routes/recovery.js";
+import { router as adaptiveRoute } from "./routes/adaptiveRoute.js";
+dotenv.config();
 
 
 
@@ -22,7 +22,7 @@ app.use("/home", home);
 app.use("/signup", signupRoute);
 app.use("/recover", recovery);
 app.use("/peer", peerRoute);
-
+app.use("/api", adaptiveRoute);
 // Start Server
 const PORT = process.env.PORT || 5000;
 

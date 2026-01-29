@@ -1,0 +1,36 @@
+{
+  "s_cols": [
+    "s_session_duration",
+    "s_total_distance",
+    "s_num_actions",
+    "s_num_clicks",
+    "s_mean_time_per_action",
+    "s_vel_mean",
+    "s_vel_std",
+    "s_accel_mean",
+    "s_accel_std",
+    "s_curve_mean",
+    "s_curve_std",
+    "s_jerk_mean",
+    "s_persona_novice_old",
+    "s_persona_intermediate",
+    "s_persona_expert"
+  ],
+  "sp_cols": [
+    "sp_session_duration",
+    "sp_total_distance",
+    "sp_num_actions",
+    "sp_num_clicks",
+    "sp_mean_time_per_action",
+    "sp_vel_mean",
+    "sp_vel_std",
+    "sp_accel_mean",
+    "sp_accel_std",
+    "sp_curve_mean",
+    "sp_curve_std",
+    "sp_jerk_mean",
+    "sp_persona_novice_old",
+    "sp_persona_intermediate",
+    "sp_persona_expert"
+  ]
+}

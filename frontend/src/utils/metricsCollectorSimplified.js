@@ -10,7 +10,24 @@
 
 import { TransitionBuilder } from "./snapshotSchema.js";
 import IndexedDBManager from "./indexedDBManager.js";
-
+import { metricsToStateVector, getDQNAction } from "./dqnAdapter.js";
+const STATE_COL_ORDER = [
+  "s_session_duration",
+  "s_total_distance",
+  "s_num_actions",
+  "s_num_clicks",
+  "s_mean_time_per_action",
+  "s_vel_mean",
+  "s_vel_std",
+  "s_accel_mean",
+  "s_accel_std",
+  "s_curve_mean",
+  "s_curve_std",
+  "s_jerk_mean",
+  "s_persona_novice_old",
+  "s_persona_intermediate",
+  "s_persona_expert"
+];
 export class MetricsCollector {
   constructor(sessionId, flowId, stepId) {
     this.sessionId = sessionId;
@@ -21,6 +38,7 @@ export class MetricsCollector {
     this.lastCollectionTime = Date.now();
     this.windowMetrics = null;
     this.currentAction = -1; // No action yet
+    this.currentDQNAction = -1; // DQN action fetched at snapshot time
     this.currentPersona = null;
     this.currentUIState = null;
     this.currentTaskData = null; // Task tracking data
@@ -107,9 +125,12 @@ export class MetricsCollector {
 
   /**
    * Collect ONE snapshot (if enough time has passed)
-   * This is the ONLY place where snapshots are created
+   * CRITICAL: This is the ONLY place where:
+   * 1. Snapshots are created
+   * 2. DQN actions are fetched (tied to 10-second window)
+   * 3. Actions are recorded for RL training
    */
-  collectSnapshot() {
+  async collectSnapshot() {
     if (!this.shouldCollect()) {
       return null;
     }
@@ -119,6 +140,21 @@ export class MetricsCollector {
         "[MetricsCollector] Cannot collect snapshot - missing metrics or persona",
       );
       return null;
+    }
+
+    // CRITICAL: Fetch DQN action only at snapshot time (every 10 seconds)
+    // This ensures the action is held constant during the entire 10-second window
+    let dqnAction = -1;
+    try {
+      const stateVector = metricsToStateVector(this.windowMetrics, this.currentPersona);
+      if (stateVector) {
+        dqnAction = await getDQNAction(stateVector);
+        this.currentDQNAction = dqnAction;
+        console.log(`[MetricsCollector] DQN action fetched at snapshot time: ${dqnAction}`);
+      }
+    } catch (error) {
+      console.error("[MetricsCollector] Failed to fetch DQN action:", error);
+      dqnAction = -1; // Fallback to rule-based
     }
 
     // Calculate elapsed time and task data
@@ -142,7 +178,8 @@ export class MetricsCollector {
             : this.currentPersona?.confidence,
       },
 
-      action: this.currentAction, // Action that was just applied
+      action: this.currentAction, // Action that was applied during this window
+      dqnAction: dqnAction, // DQN action fetched at this moment
 
       uiState: this.currentUIState || {},
 
@@ -182,6 +219,7 @@ export class MetricsCollector {
       {
         persona: this.currentPersona?.persona || this.currentPersona?.type,
         action: this.currentAction,
+        dqnAction: dqnAction,
       },
     );
 
@@ -191,28 +229,55 @@ export class MetricsCollector {
   /**
    * Build state vector matching DQN format
    */
-  buildStateVector(metrics, persona) {
-    if (!metrics || !persona) return null;
+  // buildStateVector(metrics, persona) {
+  //   if (!metrics || !persona) return null;
 
-    const personaType = persona.persona || persona.type || "intermediate";
-    return {
-      s_session_duration: metrics.s_session_duration || 0,
-      s_total_distance: metrics.s_total_distance || 0,
-      s_num_actions: metrics.s_num_actions || 0,
-      s_num_clicks: metrics.s_num_clicks || 0,
-      s_mean_time_per_action: metrics.s_mean_time_per_action || 0,
-      s_vel_mean: metrics.s_vel_mean || 0,
-      s_vel_std: metrics.s_vel_std || 0,
-      s_accel_mean: metrics.s_accel_mean || 0,
-      s_accel_std: metrics.s_accel_std || 0,
-      s_curve_mean: metrics.s_curve_mean || 0,
-      s_curve_std: metrics.s_curve_std || 0,
-      s_jerk_mean: metrics.s_jerk_mean || 0,
-      s_persona_novice_old: personaType === "novice_old" ? 1.0 : 0.0,
-      s_persona_intermediate: personaType === "intermediate" ? 1.0 : 0.0,
-      s_persona_expert: personaType === "expert" ? 1.0 : 0.0,
-    };
-  }
+  //   const personaType = persona.persona || persona.type || "intermediate";
+  //   return {
+  //     s_session_duration: metrics.s_session_duration || 0,
+  //     s_total_distance: metrics.s_total_distance || 0,
+  //     s_num_actions: metrics.s_num_actions || 0,
+  //     s_num_clicks: metrics.s_num_clicks || 0,
+  //     s_mean_time_per_action: metrics.s_mean_time_per_action || 0,
+  //     s_vel_mean: metrics.s_vel_mean || 0,
+  //     s_vel_std: metrics.s_vel_std || 0,
+  //     s_accel_mean: metrics.s_accel_mean || 0,
+  //     s_accel_std: metrics.s_accel_std || 0,
+  //     s_curve_mean: metrics.s_curve_mean || 0,
+  //     s_curve_std: metrics.s_curve_std || 0,
+  //     s_jerk_mean: metrics.s_jerk_mean || 0,
+  //     s_persona_novice_old: personaType === "novice_old" ? 1.0 : 0.0,
+  //     s_persona_intermediate: personaType === "intermediate" ? 1.0 : 0.0,
+  //     s_persona_expert: personaType === "expert" ? 1.0 : 0.0,
+  //   };
+  // }
+
+  buildStateVector(metrics, persona) {
+  if (!metrics || !persona) return null;
+
+  const personaType = persona.persona || persona.type || "intermediate";
+
+  const s = {
+    s_session_duration: metrics.s_session_duration || 0,
+    s_total_distance: metrics.s_total_distance || 0,
+    s_num_actions: metrics.s_num_actions || 0,
+    s_num_clicks: metrics.s_num_clicks || 0,
+    s_mean_time_per_action: metrics.s_mean_time_per_action || 0,
+    s_vel_mean: metrics.s_vel_mean || 0,
+    s_vel_std: metrics.s_vel_std || 0,
+    s_accel_mean: metrics.s_accel_mean || 0,
+    s_accel_std: metrics.s_accel_std || 0,
+    s_curve_mean: metrics.s_curve_mean || 0,
+    s_curve_std: metrics.s_curve_std || 0,
+    s_jerk_mean: metrics.s_jerk_mean || 0,
+    s_persona_novice_old: personaType === "novice_old" ? 1 : 0,
+    s_persona_intermediate: personaType === "intermediate" ? 1 : 0,
+    s_persona_expert: personaType === "expert" ? 1 : 0,
+  };
+
+  // Convert object → ordered array
+  return STATE_COL_ORDER.map(k => s[k]);
+}
 
   /**
    * Mark flow as complete

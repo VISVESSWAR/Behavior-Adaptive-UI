@@ -111,21 +111,23 @@ function AppContent() {
   }, [uiConfig, persona?.confidence]);
 
   // Collect snapshot every 10 seconds (check every second)
+  // CRITICAL: collectSnapshot is now async and fetches DQN action at snapshot time
   useEffect(() => {
     if (!metricsCollectorRef.current) return;
 
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       if (
         metricsCollectorRef.current &&
         metricsCollectorRef.current.shouldCollect()
       ) {
-        const snapshot = metricsCollectorRef.current.collectSnapshot();
+        const snapshot = await metricsCollectorRef.current.collectSnapshot();
         if (snapshot) {
           console.log("[App] Snapshot collected:", {
             timestamp: new Date(snapshot.timestamp).toLocaleTimeString(),
             persona:
               snapshot.persona?.persona || snapshot.persona?.type || "unknown",
             action: snapshot.action,
+            dqnAction: snapshot.dqnAction,
             totalSnapshots: metricsCollectorRef.current.snapshots.length,
           });
         }
@@ -137,7 +139,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <UIProvider persona={persona}>
+      <UIProvider persona={persona} metrics={metrics}>
         {/* Header with persona info */}
         <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
           <div style={{ fontSize: "12px", color: "#666" }}>
