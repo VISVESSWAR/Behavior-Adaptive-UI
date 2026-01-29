@@ -5,9 +5,8 @@ import { getActionId } from "./actionSpace";
 
 const UIContext = createContext();
 
-// Default UI state
 const DEFAULT_UI_STATE = {
-  buttonSize: 3,
+  buttonSize: 2,
   textSize: 2,
   fontWeight: 2,
   spacing: 1,
@@ -21,105 +20,88 @@ const DEFAULT_UI_STATE = {
 
 const STORAGE_KEY = "ui_preferences";
 
-export function UIProvider({ children, persona = null, metrics = null }) {
+export function UIProvider({ children, persona = null }) {
   const [uiConfig, setUIConfig] = useState(DEFAULT_UI_STATE);
   const [dqnAction, setDQNAction] = useState(-1);
-  const [dqnLoading, setDQNLoading] = useState(false);
 
-  // Load saved preferences on mount
+  const personaType = persona?.persona || persona?.type;
+  const personaStable = persona?.stable;
+
+  // Load saved preferences
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setUIConfig(parsed);
-      } catch (error) {
-        console.error("Failed to load UI preferences:", error);
+        setUIConfig(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load UI preferences:", e);
       }
     }
   }, []);
 
-  // Save to localStorage whenever uiConfig changes
+  // Persist preferences
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(uiConfig));
   }, [uiConfig]);
 
-  // Monitor DQN action from MetricsCollector
-  // DQN action is fetched at snapshot time (every 10 seconds)
+  // 🔹 Read DQN action from collector (single source of truth)
   useEffect(() => {
-    if (!window.__metricsCollector) return;
-
-    const checkDQNAction = setInterval(() => {
-      const dqn = window.__metricsCollector.currentDQNAction;
-      if (dqn !== undefined && dqn !== null && dqn !== dqnAction) {
-        setDQNAction(dqn);
-        console.log(`[UIContext] DQN action updated from collector: ${dqn}`);
+    const interval = setInterval(() => {
+      if (window.__metricsCollector) {
+        const action = window.__metricsCollector.currentDQNAction ?? -1;
+        setDQNAction(prev => (prev !== action ? action : prev));
       }
-    }, 500); // Check every 500ms for new DQN action
+    }, 500);
 
-    return () => clearInterval(checkDQNAction);
-  }, [dqnAction]);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Apply automatic persona-based adaptation
-  // CRITICAL: Only adapt when DQN action changes (every 10 seconds with snapshot)
-  // Fallback to rule-based if DQN unavailable
+  // 🔹 Apply adaptation ONLY when snapshot-level action changes
   useEffect(() => {
-    if (!persona || !persona.stable) return;
+    if (!personaStable) return;
 
     let actions = [];
 
-    // PRIORITY 1: Use DQN model prediction if available (fetched at snapshot time)
     if (dqnAction >= 0 && dqnAction <= 9) {
       actions = [dqnAction];
-      console.log(
-        `[UI Adaptation] Using DQN action: ${dqnAction} for persona ${persona.persona || persona.type}`,
-      );
-    } 
-    // PRIORITY 2: Fallback to rule-based actions
-    else {
-      actions = getActionsForPersona(persona.persona || persona.type, persona.metrics);
-      console.log(
-        `[UI Adaptation] Persona detected: ${persona.persona || persona.type} (confidence: ${persona.confidence?.toFixed(2)})`,
-        `Using ${actions.length} rule-based actions`,
-      );
+      console.log(`[UI Adaptation] Using DQN action: ${dqnAction}`);
+    } else {
+      actions = getActionsForPersona(personaType);
+      console.log(`[UI Adaptation] Using rule-based actions for ${personaType}`);
     }
 
-    // Apply each action sequentially
-    if (actions.length > 0) {
-      let adaptedConfig = { ...uiConfig };
-      actions.forEach((action) => {
-        adaptedConfig = applyAction(adaptedConfig, action);
-        console.log(
-          `[Current UI State] Applied action: ${action} | buttonSize: ${adaptedConfig.buttonSize}, textSize: ${adaptedConfig.textSize}, spacing: ${adaptedConfig.spacing}, tooltips: ${adaptedConfig.tooltips}`,
-        );
+    if (actions.length === 0) return;
 
-        // Record each automatic action to metrics collector
+    // ✅ FIX: Functional state update to avoid stale uiConfig
+    setUIConfig(prevConfig => {
+      let adaptedConfig = { ...prevConfig };
+
+      actions.forEach(action => {
+        adaptedConfig = applyAction(adaptedConfig, action);
+
         if (window.__metricsCollector) {
-          const actionId = getActionId(action);
-          window.__metricsCollector.recordAction(actionId);
+          window.__metricsCollector.recordAction(getActionId(action));
         }
       });
 
-      // Update UI config with all adaptations
-      setUIConfig(adaptedConfig);
-    }
-  }, [persona?.stable, persona?.type, dqnAction]);
+      console.log(
+        `[Current UI State] buttonSize:${adaptedConfig.buttonSize}, textSize:${adaptedConfig.textSize}, spacing:${adaptedConfig.spacing}, tooltips:${adaptedConfig.tooltips}`
+      );
 
-  // Apply an action to update UI state (manual dispatch)
-  const dispatchAction = (action) => {
-    setUIConfig((prevConfig) => applyAction(prevConfig, action));
+      return adaptedConfig;
+    });
 
-    // Record action in metrics collector if available
+  }, [personaType, personaStable, dqnAction]);
+
+  const dispatchAction = action => {
+    setUIConfig(prev => applyAction(prev, action));
     if (window.__metricsCollector) {
       window.__metricsCollector.recordAction(action);
-      console.log(`[UIContext] Manual action recorded: ${action}`);
     }
   };
 
   return (
-    <UIContext.Provider
-      value={{ uiConfig, setUIConfig, dispatchAction, persona, dqnAction, dqnLoading }}
-    >
+    <UIContext.Provider value={{ uiConfig, dispatchAction, persona, dqnAction }}>
       {children}
     </UIContext.Provider>
   );

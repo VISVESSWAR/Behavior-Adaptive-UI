@@ -10,8 +10,6 @@ import { router as recovery } from "./routes/recovery.js";
 import { router as adaptiveRoute } from "./routes/adaptiveRoute.js";
 dotenv.config();
 
-
-
 const app = express();
 app.use(cors());
 app.use(express.json());

@@ -10,7 +10,7 @@ const FALLBACK_ACTION = 0; // restore default layout
 
 router.post("/adaptive-action", async (req, res) => {
   const { state } = req.body;
-
+    console.log("Received state vector for DQN prediction:", state);
   // Basic validation
   if (!state || !Array.isArray(state)) {
     return res.status(400).json({ error: "State vector required" });
@@ -22,6 +22,8 @@ router.post("/adaptive-action", async (req, res) => {
       { state },
       { timeout: TIMEOUT_MS }
     );
+    console.log("ML server response:", mlResponse.data);    
+        
 
     return res.json({ action: mlResponse.data.action });
 

@@ -178,8 +178,12 @@ export class MetricsCollector {
             : this.currentPersona?.confidence,
       },
 
-      action: this.currentAction, // Action that was applied during this window
-      dqnAction: dqnAction, // DQN action fetched at this moment
+      // CRITICAL: For RL training, use dqnAction (the action chosen at THIS boundary)
+      // dqnAction will be applied during the NEXT window and influence the next state
+      // This preserves causality: (S_t, A_t, S_{t+1}) where A_t is dqnAction from THIS snapshot
+      action: dqnAction,           // ✅ Action chosen for next window (will be applied in next window)
+      dqnAction: dqnAction,        // Stored for logging/visibility
+      ruleBasedAction: this.currentAction, // Fallback action (for reference only)
 
       uiState: this.currentUIState || {},
 
@@ -217,9 +221,11 @@ export class MetricsCollector {
     console.log(
       `[MetricsCollector] Snapshot collected: ${this.snapshots.length} total`,
       {
+        timestamp: new Date(snapshot.timestamp).toLocaleTimeString(),
         persona: this.currentPersona?.persona || this.currentPersona?.type,
-        action: this.currentAction,
-        dqnAction: dqnAction,
+        stateVector: "S_" + (this.snapshots.length - 1),
+        action: `A_${dqnAction} (from DQN)`,
+        causality: `(S_${this.snapshots.length - 1}, A_${dqnAction}, S_${this.snapshots.length})`,
       },
     );
 

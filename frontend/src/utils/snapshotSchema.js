@@ -52,6 +52,14 @@ export const SNAPSHOT_SCHEMA = {
   // (i.e., the action that caused the state change from t-1 to t)
   action: "number (0-9, or -1 if no action)",
 
+  // RL CAUSALITY GUARANTEE:
+  // For transitions built from consecutive snapshots:
+  //   transition_t = (S_t, snapshot_t.action, S_{t+1})
+  // 
+  // snapshot_t.action is the DQN action CHOSEN at boundary t
+  // It will be applied during window t+1 to produce S_{t+1}
+  // This preserves: action_t causes state_t → state_{t+1}
+
   // UI state after action was applied
   uiState: {
     buttonSize: "number",
