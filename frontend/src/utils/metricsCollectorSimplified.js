@@ -481,10 +481,44 @@ export class MetricsCollector {
         const r_task = curr.taskReward ?? 0;
         const r_behavior = (curr.userFeedback ?? 0) * 0.5;
 
+        // 🎯 ENHANCED REWARD CALCULATION
+        // Base: task reward + user feedback
+        let r = r_task + r_behavior;
+
+        // --- UI Saturation Penalty ---
+        // Penalize actions that saturate UI dimensions (text, spacing, button changes)
+        // Encourages agent to avoid excessive styling
+        if (curr.metrics?.uiSaturation) {
+          const sat = curr.metrics.uiSaturation;
+          const saturatedDims = ["text", "spacing", "button"]
+            .filter(k => sat[k] !== null && sat[k] > 0.8).length;
+          r -= 0.03 * saturatedDims;
+        }
+
+        // --- Performance Micro Rewards ---
+        // Reward good mouse control (low speed = precise movements)
+        if (curr.metrics?.mouseSpeed !== null && curr.metrics.mouseSpeed < 0.4) {
+          r += 0.02;
+        }
+        // Penalize excessive misclicks (sign of poor adaptation)
+        if (curr.metrics?.misclicks !== null && curr.metrics.misclicks > 2) {
+          r -= 0.02;
+        }
+
+        // --- Action Diversity Bonus ---
+        // Encourage exploration by rewarding different actions
+        // prevAction is final action from previous snapshot
+        if (prev.finalAction !== curr.finalAction) {
+          r += 0.01;
+        }
+
+        // --- Clamp to valid reward range ---
+        r = Math.max(-1, Math.min(1, r));
+
         const transition = {
           s,
           a: prev.finalAction,
-          r: r_task + r_behavior,
+          r: r,  // Enhanced reward
           r_task,
           r_behavior,
           s_prime,
