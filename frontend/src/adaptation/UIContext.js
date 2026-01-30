@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { applyAction } from "./applyAction";
-import { getActionsForPersona } from "./personaActionMapper";
+import { getActionsForPersona, getCooldownManager } from "./personaActionMapper";
 import { getActionId } from "./actionSpace";
 
 const UIContext = createContext();
@@ -23,6 +23,7 @@ const STORAGE_KEY = "ui_preferences";
 export function UIProvider({ children, persona = null }) {
   const [uiConfig, setUIConfig] = useState(DEFAULT_UI_STATE);
   const [dqnAction, setDQNAction] = useState(-1);
+  const cooldownManager = getCooldownManager();
 
   const personaType = persona?.persona || persona?.type;
   const personaStable = persona?.stable;
@@ -60,13 +61,16 @@ export function UIProvider({ children, persona = null }) {
   useEffect(() => {
     if (!personaStable) return;
 
+    // Tick cooldown each decision cycle
+    cooldownManager.tick();
+
     let actions = [];
 
     if (dqnAction >= 0 && dqnAction <= 9) {
       actions = [dqnAction];
       console.log(`[UI Adaptation] Using DQN action: ${dqnAction}`);
     } else {
-      actions = getActionsForPersona(personaType);
+      actions = getActionsForPersona(personaType, null, cooldownManager);
       console.log(`[UI Adaptation] Using rule-based actions for ${personaType}`);
     }
 
@@ -78,6 +82,9 @@ export function UIProvider({ children, persona = null }) {
 
       actions.forEach(action => {
         adaptedConfig = applyAction(adaptedConfig, action);
+
+        // Apply cooldown to prevent rapid repeats
+        cooldownManager.applyCooldown(action);
 
         if (window.__metricsCollector) {
           window.__metricsCollector.recordAction(getActionId(action));
@@ -95,6 +102,10 @@ export function UIProvider({ children, persona = null }) {
 
   const dispatchAction = action => {
     setUIConfig(prev => applyAction(prev, action));
+    
+    // Apply cooldown to manually dispatched actions
+    cooldownManager.applyCooldown(action);
+    
     if (window.__metricsCollector) {
       window.__metricsCollector.recordAction(action);
     }

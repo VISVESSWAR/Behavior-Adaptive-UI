@@ -2,17 +2,26 @@
  * Maps persona types to UI adaptation actions
  * Persona classification → Action selection logic
  * Also applies metric-specific adaptations (simulated RL rules)
+ * Includes action cooldown system to prevent repeated UP actions
  */
 
 import { ACTION_SPACE } from "./actionSpace";
+import { ActionCooldownManager } from "./actionCooldown";
+
+// Global cooldown manager instance
+const cooldownManager = new ActionCooldownManager();
 
 /**
  * Get recommended actions based on persona type + metrics
+ * WITH COOLDOWN FILTERING to prevent rapid repeated actions
+ * 
  * @param {string} persona - "novice_old", "intermediate", "expert"
  * @param {object} metrics - adapted metrics {vel_mean, idle, hesitation, misclicks}
- * @returns {number[]} array of action IDs to apply
+ * @param {ActionCooldownManager} cooldown - optional cooldown manager (uses global if not provided)
+ * @returns {number[]} array of action IDs to apply (filtered by cooldown)
  */
-export function getActionsForPersona(persona, metrics = null) {
+export function getActionsForPersona(persona, metrics = null, cooldown = null) {
+  const cm = cooldown || cooldownManager;
   const actions = [];
 
   // === METRIC-SPECIFIC RULES (Simulated RL model) ===
@@ -50,49 +59,56 @@ export function getActionsForPersona(persona, metrics = null) {
       );
     }
 
-    // If metric-based actions were applied, return them
+    // If metric-based actions were applied, filter by cooldown and return
     if (actions.length > 0) {
-      return actions;
+      return cm.filterBlockedActions(actions);
     }
   }
 
   // === PERSONA-BASED FALLBACK (if no metric rules triggered) ===
-  switch (persona) {
-    case "novice_old":
-      // Novice/elderly users need: larger buttons, larger text, more spacing, tooltips
-      return [
-        ACTION_SPACE[1], // button_up (make buttons bigger)
-        ACTION_SPACE[3], // text_up (increase text size)
-        ACTION_SPACE[7], // spacing_up (more padding)
-        ACTION_SPACE[9], // enable_tooltips (help with navigation)
-      ];
+  const personaActions = {
+    novice_old: [
+      ACTION_SPACE[1], // button_up (make buttons bigger)
+      ACTION_SPACE[3], // text_up (increase text size)
+      ACTION_SPACE[7], // spacing_up (more padding)
+      ACTION_SPACE[9], // enable_tooltips (help with navigation)
+    ],
 
-    case "expert":
-      // Expert users prefer: compact UI, smaller text, minimal spacing, no tooltips
-      return [
-        ACTION_SPACE[2], // button_down (compact buttons)
-        ACTION_SPACE[4], // text_down (smaller text)
-        ACTION_SPACE[8], // spacing_down (minimal padding)
-        // no tooltips for experts
-      ];
+    expert: [
+      ACTION_SPACE[2], // button_down (compact buttons)
+      ACTION_SPACE[4], // text_down (smaller text)
+      ACTION_SPACE[8], // spacing_down (minimal padding)
+      // no tooltips for experts
+    ],
 
-    case "intermediate":
-    default:
-      // Intermediate: balanced defaults, no major changes
-      return [ACTION_SPACE[0]]; // noop
-  }
+    intermediate: [ACTION_SPACE[0]], // noop
+  };
+
+  const selectedActions = personaActions[persona] || personaActions.intermediate;
+  
+  // Apply cooldown filtering to persona-based actions too
+  return cm.filterBlockedActions(selectedActions);
 }
 
 /**
  * Get personalized action history for a user
  * @param {string} persona - Current persona
  * @param {object} history - Previous adaptation actions
+ * @param {ActionCooldownManager} cooldown - optional cooldown manager
  * @returns {number[]} filtered actions to apply
  */
-export function getContextualActions(persona, history = {}) {
-  const baseActions = getActionsForPersona(persona);
+export function getContextualActions(persona, history = {}, cooldown = null) {
+  const baseActions = getActionsForPersona(persona, null, cooldown);
 
   // TODO: Enhance with learning from user interaction patterns
-  // For now, return base actions for persona
+  // For now, return base actions for persona (already cooldown-filtered)
   return baseActions;
+}
+
+/**
+ * Get the global cooldown manager instance
+ * @returns {ActionCooldownManager}
+ */
+export function getCooldownManager() {
+  return cooldownManager;
 }
