@@ -65,11 +65,18 @@ export class MetricsCollector {
     this.lastActionSource = null; // Track action source for logging
     
     this.dbManager = new IndexedDBManager();
+    this.dbReady = false; // Track initialization state
+    
+    // ⚠️ CRITICAL: Wait for DB to initialize before allowing collection
     this.dbManager
       .init()
-      .catch((err) =>
-        console.error("[MetricsCollector] Failed to init DB", err),
-      );
+      .then(() => {
+        this.dbReady = true;
+        console.log("[MetricsCollector] IndexedDB ready for data collection");
+      })
+      .catch((err) => {
+        console.error("[MetricsCollector] Failed to init DB - data will NOT be persisted:", err);
+      });
   }
 
   /**
@@ -94,6 +101,61 @@ export class MetricsCollector {
    */
   setLatestFeedback(feedback) {
     this.latestFeedback = feedback;
+  }
+
+  /**
+   * Save transition with exponential backoff retry
+   * @param {Object} transition - The transition to save
+   * @param {number} maxRetries - Maximum number of retry attempts
+   * @param {number} initialDelay - Initial delay in ms (doubles each retry)
+   */
+  async saveTransitionWithRetry(transition, maxRetries = 3, initialDelay = 100) {
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Mark DB as ready if initialization completed
+        if (!this.dbReady && this.dbManager.isConnectionValid()) {
+          this.dbReady = true;
+          console.log("[MetricsCollector] DB connection restored");
+        }
+
+        // Skip if DB not ready yet
+        if (!this.dbReady) {
+          console.warn(`[MetricsCollector] DB not ready (attempt ${attempt + 1}/${maxRetries})`);
+          lastError = new Error("DB not ready");
+          
+          // Wait before retrying
+          if (attempt < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, initialDelay * Math.pow(2, attempt)));
+          }
+          continue;
+        }
+
+        // Try to save
+        await this.dbManager.saveTransition(transition);
+        return; // Success!
+      } catch (err) {
+        lastError = err;
+        console.warn(
+          `[MetricsCollector] Save failed (attempt ${attempt + 1}/${maxRetries}):`,
+          err.message
+        );
+
+        // If last attempt, log error but don't crash
+        if (attempt === maxRetries - 1) {
+          console.error(
+            "[MetricsCollector] Failed to save transition after all retries:",
+            lastError
+          );
+          return;
+        }
+
+        // Wait with exponential backoff before retrying
+        const delay = initialDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
 
   /**
@@ -165,7 +227,13 @@ export class MetricsCollector {
    * Call this from a timer or on user interaction
    */
   shouldCollect() {
-    return Date.now() - this.lastCollectionTime >= this.collectionInterval;
+    const shouldCollect = Date.now() - this.lastCollectionTime >= this.collectionInterval;
+    if (shouldCollect) {
+      console.log(
+        `[MetricsCollector] shouldCollect=true (${Math.round(Date.now() - this.lastCollectionTime)}ms elapsed >= ${this.collectionInterval}ms)`
+      );
+    }
+    return shouldCollect;
   }
 
   /**
@@ -199,11 +267,25 @@ export class MetricsCollector {
       return null;
     }
 
+    console.log(
+      `[MetricsCollector] Starting snapshot collection...`,
+      {
+        dbReady: this.dbReady,
+        hasMetrics: !!this.windowMetrics,
+        hasPersona: !!this.currentPersona,
+        snapshots: this.snapshots.length,
+      }
+    );
+
     // CRITICAL: Even if metrics/persona missing, collect snapshot with defaults
     // Never skip snapshots - preserves consistent 10-second timing
     if (!this.windowMetrics || !this.currentPersona) {
       console.warn(
         "[MetricsCollector] Snapshot collection: missing metrics or persona, using defaults",
+        {
+          metricsNull: !this.windowMetrics,
+          personaNull: !this.currentPersona,
+        }
       );
       // Use NULL/UNKNOWN values to avoid misleading training data
       // ⚠️ CRITICAL: Don't use "low" defaults - makes idle look like perfect state
@@ -353,7 +435,11 @@ export class MetricsCollector {
       // CRITICAL: Masking info - which gating mechanisms applied
       // Used for RL analysis: filter/understand which transitions were gated
       maskingInfo: {
-        idleGated: idleGated,      // True if user was idle (> 5s), action set to 0
+        idleGated: idleGated,
+        cooldownMasked: cooldownMasked,
+        metricsNull: !metricsAreValid,
+        modelAction: dqnAction,
+        finalAction: finalAction
       },
 
       uiState: this.currentUIState || {},
@@ -377,29 +463,59 @@ export class MetricsCollector {
     // Reset feedback after attaching to snapshot (one-time use)
     this.latestFeedback = 0;
 
-    // Save to IndexedDB for persistence
-    this.dbManager
-      .saveTransition({
-        ...snapshot,
-        state: this.buildStateVector(this.windowMetrics, this.currentPersona),
-        next_state: this.buildStateVector(
-          this.windowMetrics,
-          this.currentPersona,
-        ),
-        reward: 0,
-      })
-      .catch((err) =>
-        console.error("[MetricsCollector] Failed to save snapshot", err),
-      );
+    // Build RL transitions ONLY when we have at least 2 snapshots
+    // Transition uses: state from prev snapshot, action from prev, reward from curr, next_state from curr
+    if (this.snapshots.length >= 2) {
+      const prev = this.snapshots[this.snapshots.length - 2];
+      const curr = this.snapshots[this.snapshots.length - 1];
+
+      const s = this.buildStateVector(prev.metrics, prev.persona);
+      const s_prime = this.buildStateVector(curr.metrics, curr.persona);
+
+      // ⚠️ CRITICAL: Only save if state vectors are valid (not null)
+      if (s === null || s_prime === null) {
+        console.warn(
+          "[MetricsCollector] Skipping transition - invalid state vector (metrics/persona missing)"
+        );
+      } else {
+        const r_task = curr.taskReward ?? 0;
+        const r_behavior = (curr.userFeedback ?? 0) * 0.5;
+
+        const transition = {
+          s,
+          a: prev.finalAction,
+          r: r_task + r_behavior,
+          r_task,
+          r_behavior,
+          s_prime,
+          done: curr.done ?? false,
+          actionSource: prev.actionSource,
+          feedback: curr.userFeedback ?? 0,
+          maskingInfo: prev.maskingInfo,
+          metadata: {
+            timestamp: curr.timestamp,
+            sessionId: curr.sessionId,
+            flowId: curr.flowId,
+            stepId: curr.stepId,
+            explorationData: prev.explorationData || null,
+          }
+        };
+
+        // ⚠️ CRITICAL: Save with retry mechanism
+        this.saveTransitionWithRetry(transition);
+      }
+    }
 
     console.log(
-      `[MetricsCollector] Snapshot collected: ${this.snapshots.length} total`,
+      `[MetricsCollector] ✓ Snapshot collected: ${this.snapshots.length} total`,
       {
         persona: this.currentPersona?.persona || this.currentPersona?.type,
         modelAction: dqnAction,
         finalAction: finalAction,
         source: actionSource,
-      },
+        dbReady: this.dbReady,
+        dbSaved: this.snapshots.length >= 2,
+      }
     );
 
     return snapshot;
@@ -468,7 +584,7 @@ export class MetricsCollector {
   }
 
   /**
-   * Export as JSON (snapshots)
+   * Export as JSON (snapshots from current session only)
    */
   toJSON() {
     return {
@@ -484,12 +600,46 @@ export class MetricsCollector {
   }
 
   /**
+   * Export all transitions from IndexedDB as JSON
+   * ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
+   */
+  async exportStoredTransitionsAsJSON() {
+    try {
+      const data = await this.dbManager.exportAllAsJSON();
+      console.log("[MetricsCollector] Exported stored transitions as JSON");
+      return data;
+    } catch (err) {
+      console.error("[MetricsCollector] Failed to export transitions as JSON:", err);
+      return null;
+    }
+  }
+
+  /**
    * Export as CSV (requires pairing + reward function)
    * @param {Function} rewardFn - computes reward from transition
    */
   toCSV(rewardFn) {
     const transitions = this.buildTransitions(rewardFn);
     return TransitionBuilder.toCSV(transitions);
+  }
+
+  /**
+   * Export all transitions from IndexedDB as CSV
+   * ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
+   */
+  async exportStoredTransitionsAsCSV() {
+    try {
+      const csv = await this.dbManager.exportAllAsCSV();
+      if (!csv) {
+        console.warn("[MetricsCollector] No transitions to export");
+        return null;
+      }
+      console.log("[MetricsCollector] Exported stored transitions as CSV");
+      return csv;
+    } catch (err) {
+      console.error("[MetricsCollector] Failed to export transitions as CSV:", err);
+      return null;
+    }
   }
 
   /**
@@ -505,13 +655,18 @@ export class MetricsCollector {
     // Required fields in every snapshot
     const requiredFields = [
       "timestamp",
-      "state",
+      "sessionId",
+      "flowId",
+      "stepId",
+      "metrics",
+      "persona",
       "action",
-      "reward",
-      "next_state",
-      "userFeedback",
+      "finalAction",
       "actionSource",
+      "userFeedback",
+      "taskReward",
       "maskingInfo",
+      "done",
     ];
 
     // Required subfields in maskingInfo
@@ -579,10 +734,11 @@ export class MetricsCollector {
       const snap = this.snapshots[idx];
       console.log(`\n[${i + 1}] Snapshot #${idx}`);
       console.log(`  timestamp: ${snap.timestamp}`);
-      console.log(`  state: ${snap.state ? "✓" : "✗ MISSING"}`);
+      console.log(`  metrics: ${snap.metrics ? "✓" : "✗ MISSING"}`);
+      console.log(`  persona: ${snap.persona ? "✓" : "✗ MISSING"}`);
       console.log(`  action: ${snap.action}`);
-      console.log(`  reward: ${snap.reward}`);
-      console.log(`  next_state: ${snap.next_state ? "✓" : "✗ MISSING"}`);
+      console.log(`  finalAction: ${snap.finalAction}`);
+      console.log(`  taskReward: ${snap.taskReward}`);
       console.log(`  userFeedback: ${snap.userFeedback}`);
       console.log(`  actionSource: ${snap.actionSource}`);
       console.log(`  maskingInfo:`);
@@ -611,6 +767,68 @@ export class MetricsCollector {
     }
     console.log("=".repeat(80) + "\n");
   }
+  /**
+   * Print diagnostic information about collection status
+   * ⚠️ CRITICAL: Run this to debug why data is not being collected
+   * Usage: collector.printCollectionDiagnostics()
+   */
+  printCollectionDiagnostics() {
+    console.log("\n" + "=".repeat(80));
+    console.log("METRICS COLLECTOR DIAGNOSTICS");
+    console.log("=".repeat(80));
+
+    console.log(`\n[INITIALIZATION]`);
+    console.log(`  SessionId: ${this.sessionId}`);
+    console.log(`  FlowId: ${this.flowId}`);
+    console.log(`  StepId: ${this.stepId}`);
+    console.log(`  DB Ready: ${this.dbReady ? "✓ YES" : "✗ NO"}`);
+    console.log(`  DB Manager: ${this.dbManager ? "✓ EXISTS" : "✗ MISSING"}`);
+
+    console.log(`\n[STATE]`);
+    console.log(`  Snapshots collected: ${this.snapshots.length}`);
+    console.log(`  Current idle state: ${this.isIdle ? "IDLE" : "ACTIVE"}`);
+    console.log(`  Latest feedback: ${this.latestFeedback}`);
+    console.log(`  Current persona: ${this.currentPersona ? "✓ SET" : "✗ NOT SET"}`);
+    console.log(`  Current metrics: ${this.windowMetrics ? "✓ SET" : "✗ NOT SET"}`);
+    console.log(`  Current UI state: ${this.currentUIState ? "✓ SET" : "✗ NOT SET"}`);
+
+    console.log(`\n[RECENT SNAPSHOTS]`);
+    if (this.snapshots.length === 0) {
+      console.log(`  ✗ No snapshots collected yet`);
+    } else {
+      const lastSnaps = this.snapshots.slice(-3);
+      lastSnaps.forEach((snap, idx) => {
+        const snapIdx = this.snapshots.length - (3 - idx);
+        console.log(`  [${snapIdx}] timestamp: ${new Date(snap.timestamp).toISOString()}`);
+        console.log(`       persona: ${snap.persona?.name || "unknown"}, action: ${snap.finalAction}, reward: ${snap.taskReward}`);
+        console.log(`       masking: idle=${snap.maskingInfo?.idleGated}, cooldown=${snap.maskingInfo?.cooldownMasked}, metricsNull=${snap.maskingInfo?.metricsNull}`);
+      });
+    }
+
+    console.log(`\n[TRANSITION BUILDING]`);
+    if (this.snapshots.length < 2) {
+      console.log(`  ✗ Need at least 2 snapshots to build transitions (currently ${this.snapshots.length})`);
+    } else {
+      console.log(`  ✓ Can build transitions (${this.snapshots.length - 1} potential transitions)`);
+      
+      // Check if state vectors are buildable
+      const prev = this.snapshots[this.snapshots.length - 2];
+      const curr = this.snapshots[this.snapshots.length - 1];
+      const s = this.buildStateVector(prev.metrics, prev.persona);
+      const s_prime = this.buildStateVector(curr.metrics, curr.persona);
+      
+      if (s && s_prime) {
+        console.log(`  ✓ Latest state vectors valid (15 features each)`);
+      } else {
+        console.log(`  ✗ Latest state vectors INVALID:`);
+        console.log(`    - prev state: ${s ? "✓" : "✗ (missing metrics or persona)"}`);
+        console.log(`    - curr state: ${s_prime ? "✓" : "✗ (missing metrics or persona)"}`);
+      }
+    }
+
+    console.log(`\n[DATABASE]`);
+    this.dbManager.printDiagnostics();
+  }
 }
 
 /**
@@ -632,6 +850,7 @@ export class MetricsCollector {
  *   };
  *
  *   // Persona updated
+
  *   useEffect(() => {
  *     collector.updatePersona(persona);
  *   }, [persona]);

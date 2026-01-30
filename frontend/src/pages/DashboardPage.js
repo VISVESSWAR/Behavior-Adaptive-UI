@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMetricsCollector } from "../context/MetricsContext";
 import IndexedDBManager from "../utils/indexedDBManager";
-import { TransitionBuilder } from "../utils/snapshotSchema";
-import { computeReward } from "../utils/rewardFunction";
 import AdaptiveButton from "../components/AdaptiveButton";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
 
@@ -55,20 +53,13 @@ export default function DashboardPage() {
     try {
       const dbManager = new IndexedDBManager();
       await dbManager.init();
-      const allSnapshots = await dbManager.getAll();
-      if (!allSnapshots || allSnapshots.length === 0) {
-        alert("No snapshots to export");
+
+      const csvData = await dbManager.exportAllAsCSV();
+
+      if (!csvData) {
+        alert("No transitions to export");
         return;
       }
-
-      const sortedSnapshots = allSnapshots.sort(
-        (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
-      );
-      const transitions = TransitionBuilder.buildTransitions(
-        sortedSnapshots,
-        computeReward,
-      );
-      const csvData = TransitionBuilder.toCSV(transitions);
 
       const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a");
@@ -76,8 +67,7 @@ export default function DashboardPage() {
       a.download = `dqn_ui_dataset_${Date.now()}.csv`;
       a.click();
     } catch (error) {
-      console.error("[DashboardPage] Error exporting CSV:", error);
-      alert("Error exporting CSV");
+      console.error("CSV export failed:", error);
     }
   };
 
@@ -85,38 +75,20 @@ export default function DashboardPage() {
     try {
       const dbManager = new IndexedDBManager();
       await dbManager.init();
-      const allSnapshots = await dbManager.getAll();
-      if (!allSnapshots || allSnapshots.length === 0) {
-        alert("No snapshots to export");
-        return;
-      }
 
-      const sortedSnapshots = allSnapshots.sort(
-        (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
-      );
-      const transitions = TransitionBuilder.buildTransitions(
-        sortedSnapshots,
-        computeReward,
-      );
-      const json = {
-        metadata: {
-          snapshotCount: sortedSnapshots.length,
-          transitionCount: transitions.length,
-          exportedAt: new Date().toISOString(),
-        },
-        transitions: transitions,
-      };
+      const jsonData = await dbManager.exportAllAsJSON();
 
-      const blob = new Blob([JSON.stringify(json, null, 2)], {
-        type: "application/json",
-      });
+      const blob = new Blob(
+        [JSON.stringify(jsonData, null, 2)],
+        { type: "application/json" }
+      );
+
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `dqn_ui_transitions_${Date.now()}.json`;
       a.click();
     } catch (error) {
-      console.error("[DashboardPage] Error exporting JSON:", error);
-      alert("Error exporting JSON");
+      console.error("JSON export failed:", error);
     }
   };
 
