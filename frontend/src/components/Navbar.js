@@ -97,18 +97,28 @@ export default function Navbar() {
               Dashboard
             </AdaptiveButton>
           </Link>
+        </>
+      )}
 
-          <AdaptiveButton
+      {isAuthenticated && (
+        <div className="fixed top-3 right-4 z-50">
+          <button
             onClick={handleLogout}
-            style={{ 
-              padding: "8px 16px",
+            style={{
+              padding: "6px 12px",
+              fontSize: "14px",
               backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "500",
               whiteSpace: "nowrap",
             }}
           >
             Logout
-          </AdaptiveButton>
-        </>
+          </button>
+        </div>
       )}
     </nav>
   );

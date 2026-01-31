@@ -29,6 +29,8 @@ export default function TransactionPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [transactionActive, setTransactionActive] = useState(false);
+  const [transactionTimer, setTransactionTimer] = useState(0);
 
   // Start task on mount
   useEffect(() => {
@@ -41,6 +43,27 @@ export default function TransactionPage() {
 
     task.startTask("transaction_task", 60000); // 60 second limit
   }, []);
+
+  // Auto-complete transaction after 10 seconds
+  useEffect(() => {
+    if (!transactionActive) return;
+
+    const interval = setInterval(() => {
+      setTransactionTimer((prev) => {
+        const newTime = prev + 1;
+        
+        // Auto-complete at 10 seconds
+        if (newTime >= 10) {
+          completeTransactionAuto();
+          return 0;
+        }
+        
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [transactionActive]);
 
   /**
    * Handle receiver input and show suggestions
@@ -102,6 +125,46 @@ export default function TransactionPage() {
   };
 
   /**
+   * Auto-complete transaction (called at 10s)
+   */
+  const completeTransactionAuto = () => {
+    if (window.__metricsCollector) {
+      const completedTxn = window.__metricsCollector.completeTransaction("auto");
+      console.log("[TransactionPage] Auto-completed transaction:", completedTxn);
+    }
+    
+    setTransactionActive(false);
+    setTransactionTimer(0);
+    
+    logEvent({
+      type: "transaction_auto_completed",
+      flowId: FLOW_ID,
+      stepId: STEP_ID,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  /**
+   * User-initiated transaction completion
+   */
+  const completeTransactionUser = () => {
+    if (window.__metricsCollector) {
+      const completedTxn = window.__metricsCollector.completeTransaction("user");
+      console.log("[TransactionPage] User-completed transaction:", completedTxn);
+    }
+    
+    setTransactionActive(false);
+    setTransactionTimer(0);
+    
+    logEvent({
+      type: "transaction_user_completed",
+      flowId: FLOW_ID,
+      stepId: STEP_ID,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  /**
    * Handle form submission
    */
   const handleSubmit = async () => {
@@ -126,6 +189,14 @@ export default function TransactionPage() {
       receiver,
       hasNote: note.length > 0,
     });
+
+    // Start transaction in metrics collector
+    if (window.__metricsCollector) {
+      const txnId = window.__metricsCollector.startTransaction();
+      console.log("[TransactionPage] Transaction started:", txnId);
+      setTransactionActive(true);
+      setTransactionTimer(0);
+    }
 
     setLoading(true);
     setError("");
@@ -300,14 +371,71 @@ export default function TransactionPage() {
         {/* Submit Button */}
         <AdaptiveButton
           onClick={handleSubmit}
-          disabled={loading || success}
+          disabled={loading || success || transactionActive}
           style={{
-            opacity: loading || success ? 0.6 : 1,
-            cursor: loading || success ? "not-allowed" : "pointer",
+            opacity: loading || success || transactionActive ? 0.6 : 1,
+            cursor: loading || success || transactionActive ? "not-allowed" : "pointer",
           }}
         >
           {loading ? "Processing..." : success ? "Sent!" : "Send Transaction"}
         </AdaptiveButton>
+
+        {/* Transaction Status Display */}
+        {transactionActive && (
+          <div
+            style={{
+              marginTop: "15px",
+              padding: "12px",
+              backgroundColor: "#e3f2fd",
+              border: "1px solid #2196f3",
+              borderRadius: "4px",
+              textAlign: "center",
+            }}
+          >
+            <AdaptiveParagraph style={{ marginBottom: "10px", fontWeight: "bold" }}>
+              💳 Transaction in Progress
+            </AdaptiveParagraph>
+            <AdaptiveParagraph style={{ marginBottom: "10px", fontSize: "14px" }}>
+              Time elapsed: {transactionTimer}s / 10s
+            </AdaptiveParagraph>
+            
+            {/* Progress bar */}
+            <div
+              style={{
+                width: "100%",
+                height: "4px",
+                backgroundColor: "#ddd",
+                borderRadius: "2px",
+                marginBottom: "10px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  backgroundColor: "#2196f3",
+                  width: `${(transactionTimer / 10) * 100}%`,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+
+            <AdaptiveParagraph style={{ fontSize: "12px", marginBottom: "10px" }}>
+              Transaction will auto-complete in {10 - transactionTimer}s, or you can complete it now.
+            </AdaptiveParagraph>
+
+            {/* Complete button */}
+            <AdaptiveButton
+              onClick={completeTransactionUser}
+              style={{
+                backgroundColor: "#ff9800",
+                width: "100%",
+              }}
+            >
+              ✓ Complete Transaction Now
+            </AdaptiveButton>
+          </div>
+        )}
 
         {/* Info */}
         <AdaptiveParagraph style={{ marginTop: "15px", fontSize: "12px" }}>

@@ -54,6 +54,14 @@ export class MetricsCollector {
     this.personaConfidence = null; // Store persona confidence separately
     this.isIdle = false; // Idle state flag - gates DQN inference
     
+    // Transaction tracking (tied to snapshot windows)
+    this.transactionStatus = {
+      active: false,
+      transactionId: null,
+      startTime: null,
+      completeReason: null, // "auto" or "user"
+    };
+    
     // Human-in-the-loop feedback
     // Most recent feedback from Like/Dislike buttons (default 0 = no feedback)
     // Attached to next snapshot and used in RL training:
@@ -101,6 +109,67 @@ export class MetricsCollector {
    */
   setLatestFeedback(feedback) {
     this.latestFeedback = feedback;
+  }
+
+  /**
+   * Start a new transaction (tied to snapshot window)
+   * Called when user initiates a transaction (e.g., submit form)
+   */
+  startTransaction() {
+    const transactionId = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    this.transactionStatus = {
+      active: true,
+      transactionId: transactionId,
+      startTime: Date.now(),
+      completeReason: null,
+    };
+    
+    // Expose to window for UI/debugger access
+    if (typeof window !== "undefined") {
+      window.__metricsCollector = window.__metricsCollector || {};
+      window.__metricsCollector.transactionStatus = this.transactionStatus;
+    }
+    
+    console.log(`[MetricsCollector] Transaction started: ${transactionId}`);
+    return transactionId;
+  }
+
+  /**
+   * Complete current transaction
+   * @param {string} reason - "auto" for automatic (10s elapsed) or "user" for user-initiated
+   */
+  completeTransaction(reason = "auto") {
+    if (!this.transactionStatus.active) {
+      console.warn("[MetricsCollector] No active transaction to complete");
+      return null;
+    }
+
+    const completedTxn = {
+      ...this.transactionStatus,
+      completeReason: reason,
+      endTime: Date.now(),
+      duration: Date.now() - this.transactionStatus.startTime,
+    };
+
+    console.log(
+      `[MetricsCollector] Transaction completed (${reason}): ${completedTxn.transactionId}, Duration: ${completedTxn.duration}ms`
+    );
+
+    // Reset transaction status
+    this.transactionStatus = {
+      active: false,
+      transactionId: null,
+      startTime: null,
+      completeReason: null,
+    };
+
+    // Update window reference
+    if (typeof window !== "undefined") {
+      window.__metricsCollector = window.__metricsCollector || {};
+      window.__metricsCollector.transactionStatus = this.transactionStatus;
+    }
+
+    return completedTxn;
   }
 
   /**
@@ -267,6 +336,14 @@ export class MetricsCollector {
       return null;
     }
 
+    // Initialize snapshot timing if not already set
+    if (!window.__metricsCollector) {
+      window.__metricsCollector = {};
+    }
+    if (!window.__metricsCollector.snapshotStartTime) {
+      window.__metricsCollector.snapshotStartTime = Date.now();
+    }
+
     console.log(
       `[MetricsCollector] Starting snapshot collection...`,
       {
@@ -339,14 +416,15 @@ export class MetricsCollector {
       if (typeof window !== "undefined") {
         window.__metricsCollector = window.__metricsCollector || {};
         window.__metricsCollector.lastDecisionInfo = {
-          modelProb: 0.4,
-          randomProb: 0.4,
+          modelProb: 0.3,
+          randomProb: 0.5,
           antiProb: 0.2,
           source: "idle",
           dqnAction: dqnAction,
           finalAction: finalAction,
           isIdleGated: true,
           timestamp: Date.now(),
+          feedbackGiven: false,
         };
       }
     } else {
@@ -387,14 +465,15 @@ export class MetricsCollector {
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.lastDecisionInfo = {
-                modelProb: 0.4,
-                randomProb: 0.4,
+                modelProb: 0.3,
+                randomProb: 0.5,
                 antiProb: 0.2,
                 source: actionSource, // "model" | "explore" | "idle" | "fallback" | "error"
                 dqnAction: dqnAction,
                 finalAction: finalAction,
                 epsilon: explorationResult.epsilon,
                 timestamp: Date.now(),
+                feedbackGiven: false,
               };
             }
           } else {
@@ -414,13 +493,14 @@ export class MetricsCollector {
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.lastDecisionInfo = {
-                modelProb: 0.4,
-                randomProb: 0.4,
+                modelProb: 0.3,
+                randomProb: 0.5,
                 antiProb: 0.2,
                 source: "fallback",
                 dqnAction: dqnAction,
                 finalAction: finalAction,
                 timestamp: Date.now(),
+                feedbackGiven: false,
               };
             }
           }
@@ -442,13 +522,14 @@ export class MetricsCollector {
         if (typeof window !== "undefined") {
           window.__metricsCollector = window.__metricsCollector || {};
           window.__metricsCollector.lastDecisionInfo = {
-            modelProb: 0.4,
-            randomProb: 0.4,
+            modelProb: 0.3,
+            randomProb: 0.5,
             antiProb: 0.2,
             source: "error",
             dqnAction: dqnAction,
             finalAction: finalAction,
             timestamp: Date.now(),
+            feedbackGiven: false,
           };
         }
       }
@@ -539,6 +620,14 @@ export class MetricsCollector {
         pathLength: taskData.pathLength || 0,
       },
 
+      // Include transaction status in snapshot
+      transaction: {
+        active: this.transactionStatus.active,
+        transactionId: this.transactionStatus.transactionId,
+        startTime: this.transactionStatus.startTime,
+        completeReason: this.transactionStatus.completeReason,
+      },
+
       taskReward: taskReward,
 
       done: false, // Will be set to true when flow completes
@@ -549,6 +638,13 @@ export class MetricsCollector {
     
     // Reset feedback after attaching to snapshot (one-time use)
     this.latestFeedback = 0;
+
+    // Reset snapshot timer and prepare for next 10-second window
+    if (typeof window !== "undefined") {
+      window.__metricsCollector = window.__metricsCollector || {};
+      window.__metricsCollector.snapshotStartTime = Date.now();
+      window.__metricsCollector.timeRemaining = 10;
+    }
 
     // Build RL transitions ONLY when we have at least 2 snapshots
     // Transition uses: state from prev snapshot, action from prev, reward from curr, next_state from curr

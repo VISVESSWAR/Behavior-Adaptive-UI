@@ -130,6 +130,13 @@ function AppContent() {
     if (!metricsCollectorRef.current) return;
 
     const timer = setInterval(async () => {
+      // Update countdown timer
+      if (typeof window !== "undefined" && window.__metricsCollector) {
+        const snapshotStartTime = window.__metricsCollector.snapshotStartTime || Date.now();
+        const elapsed = Math.floor((Date.now() - snapshotStartTime) / 1000);
+        window.__metricsCollector.timeRemaining = Math.max(0, 10 - elapsed);
+      }
+
       if (
         metricsCollectorRef.current &&
         metricsCollectorRef.current.shouldCollect()

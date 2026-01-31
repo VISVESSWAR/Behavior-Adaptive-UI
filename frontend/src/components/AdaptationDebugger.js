@@ -17,6 +17,7 @@ export function AdaptationDebugger() {
 
   //  Get decision source tracking
   const decisionInfo = window.__metricsCollector?.lastDecisionInfo;
+  const timeLeft = window.__metricsCollector?.timeRemaining ?? 0;
 
   // Debug: log persona status
   console.log("[AdaptationDebugger] Persona:", persona, "DQN Action:", dqnAction);
@@ -27,6 +28,12 @@ export function AdaptationDebugger() {
    * Attached to next transition during snapshot collection
    */
   const handleLike = () => {
+    // Only allow one feedback per action
+    if (decisionInfo?.feedbackGiven) {
+      console.log("[AdaptationDebugger] Feedback already given for this action");
+      return;
+    }
+
     logEvent({
       type: "user_feedback",
       value: +1,
@@ -38,6 +45,9 @@ export function AdaptationDebugger() {
     // Notify collector of feedback (global reference)
     if (window.__metricsCollector) {
       window.__metricsCollector.setLatestFeedback(+1);
+      if (window.__metricsCollector.lastDecisionInfo) {
+        window.__metricsCollector.lastDecisionInfo.feedbackGiven = true;
+      }
       console.log("[AdaptationDebugger] 👍 Like feedback recorded");
     }
     
@@ -51,6 +61,12 @@ export function AdaptationDebugger() {
    * Attached to next transition during snapshot collection
    */
   const handleDislike = () => {
+    // Only allow one feedback per action
+    if (decisionInfo?.feedbackGiven) {
+      console.log("[AdaptationDebugger] Feedback already given for this action");
+      return;
+    }
+
     logEvent({
       type: "user_feedback",
       value: -1,
@@ -62,6 +78,9 @@ export function AdaptationDebugger() {
     // Notify collector of feedback (global reference)
     if (window.__metricsCollector) {
       window.__metricsCollector.setLatestFeedback(-1);
+      if (window.__metricsCollector.lastDecisionInfo) {
+        window.__metricsCollector.lastDecisionInfo.feedbackGiven = true;
+      }
       console.log("[AdaptationDebugger] 👎 Dislike feedback recorded");
     }
     
@@ -131,6 +150,11 @@ export function AdaptationDebugger() {
           </div>
           <div> Stable: {persona.stable ? "Yes ✅" : "No ⏳"}</div>
           <div> Confidence: {(persona.confidence * 100).toFixed(0)}%</div>
+        </div>
+
+        {/* Snapshot Timer */}
+        <div className="mb-2 border-b border-gray-500 pb-2">
+          <div className="text-sm">⏳ Timer: {timeLeft}s / 10s</div>
         </div>
 
         {/* DQN Status */}
@@ -212,23 +236,29 @@ export function AdaptationDebugger() {
           <div className="flex gap-2 justify-center">
             <button
               onClick={handleLike}
+              disabled={decisionInfo?.feedbackGiven}
               className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                lastFeedback === "like"
+                decisionInfo?.feedbackGiven
+                  ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                  : lastFeedback === "like"
                   ? "bg-green-500 text-black scale-110"
-                  : "bg-gray-700 hover:bg-green-600 text-white"
+                  : "bg-gray-700 hover:bg-green-600 text-white cursor-pointer"
               }`}
-              title="Click to rate the current adaptation as good"
+              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Click to rate the current adaptation as good"}
             >
               👍 Like ({feedbackCount.like})
             </button>
             <button
               onClick={handleDislike}
+              disabled={decisionInfo?.feedbackGiven}
               className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
-                lastFeedback === "dislike"
+                decisionInfo?.feedbackGiven
+                  ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-50"
+                  : lastFeedback === "dislike"
                   ? "bg-red-500 text-black scale-110"
-                  : "bg-gray-700 hover:bg-red-600 text-white"
+                  : "bg-gray-700 hover:bg-red-600 text-white cursor-pointer"
               }`}
-              title="Click to rate the current adaptation as bad"
+              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Click to rate the current adaptation as bad"}
             >
               👎 Dislike ({feedbackCount.dislike})
             </button>
