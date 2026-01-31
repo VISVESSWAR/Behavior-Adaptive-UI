@@ -24,8 +24,7 @@ export function AdaptationDebugger() {
 
   /**
    * Handle Like feedback
-   * Logs user_feedback event with value +1
-   * Attached to next transition during snapshot collection
+   * Sets feedbackOverride to "repeat" the current action in next decision
    */
   const handleLike = () => {
     // Only allow one feedback per action
@@ -42,13 +41,20 @@ export function AdaptationDebugger() {
     setLastFeedback("like");
     setFeedbackCount((prev) => ({ ...prev, like: prev.like + 1 }));
     
-    // Notify collector of feedback (global reference)
+    // Set feedback override for next decision
     if (window.__metricsCollector) {
+      // Store current action to repeat in next decision
+      const currentAction = decisionInfo?.finalAction ?? -1;
+      window.__metricsCollector.feedbackOverride = {
+        active: true,
+        type: "repeat",
+        action: currentAction,
+      };
       window.__metricsCollector.setLatestFeedback(+1);
       if (window.__metricsCollector.lastDecisionInfo) {
         window.__metricsCollector.lastDecisionInfo.feedbackGiven = true;
       }
-      console.log("[AdaptationDebugger] 👍 Like feedback recorded");
+      console.log("[AdaptationDebugger] 👍 Like feedback: will repeat action", currentAction);
     }
     
     // Reset after 1 second
@@ -57,8 +63,7 @@ export function AdaptationDebugger() {
 
   /**
    * Handle Dislike feedback
-   * Logs user_feedback event with value -1
-   * Attached to next transition during snapshot collection
+   * Sets feedbackOverride to "reverse" (apply opposite action) in next decision
    */
   const handleDislike = () => {
     // Only allow one feedback per action
@@ -75,13 +80,20 @@ export function AdaptationDebugger() {
     setLastFeedback("dislike");
     setFeedbackCount((prev) => ({ ...prev, dislike: prev.dislike + 1 }));
     
-    // Notify collector of feedback (global reference)
+    // Set feedback override for next decision
     if (window.__metricsCollector) {
+      // Store current action to reverse in next decision
+      const currentAction = decisionInfo?.finalAction ?? -1;
+      window.__metricsCollector.feedbackOverride = {
+        active: true,
+        type: "reverse",
+        action: currentAction,
+      };
       window.__metricsCollector.setLatestFeedback(-1);
       if (window.__metricsCollector.lastDecisionInfo) {
         window.__metricsCollector.lastDecisionInfo.feedbackGiven = true;
       }
-      console.log("[AdaptationDebugger] 👎 Dislike feedback recorded");
+      console.log("[AdaptationDebugger] 👎 Dislike feedback: will reverse action", currentAction);
     }
     
     // Reset after 1 second
@@ -232,7 +244,7 @@ export function AdaptationDebugger() {
 
         {/* Human-in-the-Loop Feedback */}
         <div className="mt-3 border-t border-gray-500 pt-2">
-          <div className="font-semibold mb-2 text-xs">💬 Feedback:</div>
+          <div className="font-semibold mb-2 text-xs">💬 Feedback Control:</div>
           <div className="flex gap-2 justify-center">
             <button
               onClick={handleLike}
@@ -244,7 +256,7 @@ export function AdaptationDebugger() {
                   ? "bg-green-500 text-black scale-110"
                   : "bg-gray-700 hover:bg-green-600 text-white cursor-pointer"
               }`}
-              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Click to rate the current adaptation as good"}
+              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Repeat this action in next decision"}
             >
               👍 Like ({feedbackCount.like})
             </button>
@@ -258,13 +270,27 @@ export function AdaptationDebugger() {
                   ? "bg-red-500 text-black scale-110"
                   : "bg-gray-700 hover:bg-red-600 text-white cursor-pointer"
               }`}
-              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Click to rate the current adaptation as bad"}
+              title={decisionInfo?.feedbackGiven ? "Feedback already given for this action" : "Apply opposite action in next decision"}
             >
               👎 Dislike ({feedbackCount.dislike})
             </button>
           </div>
           <div className="text-xs text-gray-500 mt-1 text-center">
-            Attached to next transition for RL training
+            {window.__metricsCollector?.feedbackOverride?.active ? (
+              <span className="text-yellow-300 font-semibold">
+                ↳ Next: {
+                  window.__metricsCollector.feedbackOverride.type === "repeat" && "🔁 Repeat action"
+                }
+                {
+                  window.__metricsCollector.feedbackOverride.type === "reverse" && "↔️ Apply opposite"
+                }
+                {
+                  window.__metricsCollector.feedbackOverride.type === "neutral" && "🎲 Explore more"
+                }
+              </span>
+            ) : (
+              <span>No feedback given → boosting exploration</span>
+            )}
           </div>
         </div>
       </div>

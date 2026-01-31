@@ -37,6 +37,18 @@ const STATE_COL_ORDER = [
   "s_persona_expert"
 ];
 
+/**
+ * Opposite action pairs for feedback-reverse
+ * When user dislikes an action, we apply its opposite in next decision
+ */
+const oppositeActionMap = {
+  0: 1, 1: 0,  // text_down <-> text_up
+  2: 3, 3: 2,  // spacing_compact <-> spacing_spacious
+  4: 5, 5: 4,  // button_small <-> button_large
+  6: 7, 7: 6,  // font_light <-> font_heavy
+  8: 9, 9: 8,  // tooltips_off <-> tooltips_on
+};
+
 export class MetricsCollector {
   constructor(sessionId, flowId, stepId) {
     this.sessionId = sessionId;
@@ -67,6 +79,14 @@ export class MetricsCollector {
     // Attached to next snapshot and used in RL training:
     // final_reward = system_reward + 0.5 * feedback
     this.latestFeedback = 0;
+    
+    // Feedback override for next decision (one-time effect)
+    // When user gives 👍 or 👎, influences the next action decision
+    this.feedbackOverride = {
+      active: false,
+      type: null, // "repeat" | "reverse" | "neutral"
+      action: null,
+    };
     
     // Epsilon-greedy exploration
     this.explorer = new EpsilonGreedyExplorer(0.4, 0.1, 0.995);
@@ -394,6 +414,54 @@ export class MetricsCollector {
     let actionSource = "idle"; // Track source: idle | model | explore
     let idleGated = false;
     let explorationData = null;
+    let feedbackApplied = false; // Track if feedback override was applied
+
+    // ============================================================
+    // HUMAN-IN-THE-LOOP FEEDBACK OVERRIDE DETECTION
+    // Applied to next decision only (then reset)
+    // ============================================================
+    // We'll check override AFTER we determine finalAction in each path
+    const applyFeedbackOverride = (proposedAction, baseEpsilon = 0.4) => {
+      const override = this.feedbackOverride;
+      
+      if (!override?.active) {
+        return { action: proposedAction, source: actionSource, epsilon: baseEpsilon };
+      }
+
+      let result = { action: proposedAction, source: actionSource, epsilon: baseEpsilon };
+
+      if (override.type === "repeat") {
+        // User liked the previous action → repeat it
+        result.action = override.action;
+        result.source = "feedback-repeat";
+        feedbackApplied = true;
+        console.log(`[MetricsCollector] 👍 Feedback: Repeating action ${override.action}`);
+      } 
+      else if (override.type === "reverse") {
+        // User disliked the previous action → apply opposite
+        const oppositeAction = oppositeActionMap[override.action];
+        if (oppositeAction !== undefined) {
+          result.action = oppositeAction;
+          result.source = "feedback-reverse";
+          feedbackApplied = true;
+          console.log(`[MetricsCollector] 👎 Feedback: Reversing action ${override.action} → ${oppositeAction}`);
+        }
+      }
+      else if (override.type === "neutral") {
+        // User gave no feedback → boost exploration
+        result.epsilon = Math.min(1.0, baseEpsilon + 0.2);
+        result.source = "feedback-neutral-explore";
+        feedbackApplied = true;
+        console.log(`[MetricsCollector] 🤷 Feedback: Neutral detected, boosting epsilon to ${result.epsilon.toFixed(3)}`);
+      }
+
+      // One-time effect: disable after applying
+      if (feedbackApplied) {
+        this.feedbackOverride.active = false;
+      }
+
+      return result;
+    };
 
     if (this.isIdle) {
       // Idle: return noop action (0), do not request DQN inference
@@ -412,6 +480,11 @@ export class MetricsCollector {
       
       console.log(`[MetricsCollector] IDLE - Using noop action (0), DQN inference paused`);
       
+      // Apply feedback override if active (one-time effect per action)
+      const override = applyFeedbackOverride(finalAction, 0.4);
+      finalAction = override.action;
+      actionSource = override.source;
+      
       // 📊 Store decision source for debugger + RL analysis
       if (typeof window !== "undefined") {
         window.__metricsCollector = window.__metricsCollector || {};
@@ -419,7 +492,7 @@ export class MetricsCollector {
           modelProb: 0.3,
           randomProb: 0.5,
           antiProb: 0.2,
-          source: "idle",
+          source: actionSource,
           dqnAction: dqnAction,
           finalAction: finalAction,
           isIdleGated: true,
@@ -441,6 +514,14 @@ export class MetricsCollector {
             const explorationResult = this.explorer.selectAction(dqnAction);
             finalAction = explorationResult.action;
             actionSource = explorationResult.source;
+            
+            // Apply feedback override if active (one-time effect per action)
+            const override = applyFeedbackOverride(finalAction, explorationResult.epsilon);
+            finalAction = override.action;
+            if (feedbackApplied) {
+              actionSource = override.source;
+            }
+            
             explorationData = {
               modelAction: dqnAction,
               finalAction: finalAction,
@@ -482,6 +563,11 @@ export class MetricsCollector {
             actionSource = "fallback";
             console.log(`[MetricsCollector] DQN returned invalid action, using noop`);
             
+            // Apply feedback override if active (one-time effect per action)
+            const override = applyFeedbackOverride(finalAction, 0.4);
+            finalAction = override.action;
+            actionSource = override.source;
+            
             // � Store both model and final actions for UI + debugger
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
@@ -496,7 +582,7 @@ export class MetricsCollector {
                 modelProb: 0.3,
                 randomProb: 0.5,
                 antiProb: 0.2,
-                source: "fallback",
+                source: actionSource,
                 dqnAction: dqnAction,
                 finalAction: finalAction,
                 timestamp: Date.now(),
@@ -510,6 +596,11 @@ export class MetricsCollector {
         dqnAction = -1; // Fallback to rule-based
         finalAction = 0;
         actionSource = "error";
+        
+        // Apply feedback override if active (one-time effect per action)
+        const override = applyFeedbackOverride(finalAction, 0.4);
+        finalAction = override.action;
+        actionSource = override.source;
         
         // � Store both model and final actions for UI + debugger
         if (typeof window !== "undefined") {
@@ -525,7 +616,7 @@ export class MetricsCollector {
             modelProb: 0.3,
             randomProb: 0.5,
             antiProb: 0.2,
-            source: "error",
+            source: actionSource,
             dqnAction: dqnAction,
             finalAction: finalAction,
             timestamp: Date.now(),
@@ -635,6 +726,16 @@ export class MetricsCollector {
 
     this.snapshots.push(snapshot);
     this.lastCollectionTime = Date.now();
+    
+    // Detect neutral feedback: if no feedback was given during this snapshot window,
+    // set neutral override to boost exploration on next decision
+    if (!window.__metricsCollector?.lastDecisionInfo?.feedbackGiven) {
+      this.feedbackOverride = {
+        active: true,
+        type: "neutral",
+        action: null,
+      };
+    }
     
     // Reset feedback after attaching to snapshot (one-time use)
     this.latestFeedback = 0;
