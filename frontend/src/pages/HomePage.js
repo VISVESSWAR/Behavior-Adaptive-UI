@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { logEvent } from "../logging/eventLogger";
+import { get } from "../api";
 import AdaptiveButton from "../components/AdaptiveButton";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText";
 import "../styles.css";
@@ -8,10 +9,11 @@ const FLOW_ID = "dashboard";
 const STEP_ID = "home";
 
 export default function HomePage() {
-  const [view, setView] = useState("qr");
+  const [view, setView] = useState("profile");
+  const [userProfile, setUserProfile] = useState(null);
   const [qrList, setQrList] = useState([]);
   const [peers, setPeers] = useState([]);
-  const [requests, setRequests] = useState([]);   // ✅ NEW
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,19 +28,18 @@ export default function HomePage() {
     const token = localStorage.getItem("token");
     let url = "";
 
+    if (view === "profile") url = "/home/profile";
     if (view === "qr") url = "/home/shared-qr";
     if (view === "peers") url = "/home/peer-details";
-    if (view === "requests") url = "/recover/tap/requests"; // ✅ NEW
+    if (view === "requests") url = "/recover/tap/requests";
 
     setLoading(true);
-    fetch("http://localhost:5000" + url, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then((r) => r.json())
+    get(url)
       .then((d) => {
+        if (view === "profile") setUserProfile(d);
         if (view === "qr") setQrList(d);
         if (view === "peers") setPeers(d.peers);
-        if (view === "requests") setRequests(d); // ✅ NEW
+        if (view === "requests") setRequests(d);
 
         logEvent({
           type: "data_loaded",
@@ -59,7 +60,7 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, [view]);
 
-  // ✅ NEW: approve / decline handler
+  
   async function respond(requestId, decision) {
     const token = localStorage.getItem("token");
 
@@ -86,12 +87,29 @@ export default function HomePage() {
           onChange={(e) => setView(e.target.value)}
           style={{ marginBottom: "20px", padding: "8px" }}
         >
+          <option value="profile">Profile</option>
           <option value="qr">List Shared QR</option>
           <option value="peers">Peer Details</option>
-          <option value="requests">Recovery Requests</option> {/* ✅ NEW */}
+          <option value="requests">Recovery Requests</option>
         </select>
 
         {loading && <AdaptiveParagraph>Loading...</AdaptiveParagraph>}
+
+        {/* ================= USER PROFILE ================= */}
+        {!loading && view === "profile" && userProfile && (
+          <div style={{ backgroundColor: "#f9fafb", padding: "16px", borderRadius: "8px", marginBottom: "16px" }}>
+            <AdaptiveHeading level={3}>User Profile</AdaptiveHeading>
+            <div style={{ marginBottom: "12px" }}>
+              <strong>Email:</strong>
+              <AdaptiveParagraph>{userProfile.email}</AdaptiveParagraph>
+            </div>
+            <div style={{ marginBottom: "12px" }}>
+              <strong>Recovery Mode:</strong>
+              <AdaptiveParagraph>{userProfile.recovery_mode ? "Enabled" : "Disabled"}</AdaptiveParagraph>
+            </div>
+            
+          </div>
+        )}
 
         {/* ================= QR LIST ================= */}
         {!loading && view === "qr" &&

@@ -42,6 +42,9 @@ export default function LoginPage() {
       const res = await post("/auth/login", { email, password });
       localStorage.setItem("token", res.token);
 
+      // Dispatch custom event to update navbar immediately
+      window.dispatchEvent(new Event("auth-change"));
+
       logEvent({
         type: "login_success",
         flowId: FLOW_ID,

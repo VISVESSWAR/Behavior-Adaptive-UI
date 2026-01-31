@@ -12,11 +12,13 @@ body {
 }
 
 .page {
-  @apply flex justify-center items-center min-h-screen;
+  @apply flex justify-center items-center min-h-screen px-4;
 }
 
 .card {
-  @apply bg-white p-8 w-80 rounded-lg shadow-lg;
+  @apply bg-white p-8 w-full rounded-lg shadow-lg;
+  @apply md:w-3/5 sm:w-11/12;
+  max-width: 600px;
 }
 
 .card.wide {

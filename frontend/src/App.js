@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { useTask } from "./task/TaskContext";
 import { MetricsProvider, useMetricsCollector } from "./context/MetricsContext";
 import useMouseTracker from "./hooks/useMouseTracker";
@@ -26,6 +26,20 @@ import ScanQRPage from "./pages/ScanQRPage"; // QR scan
 import TapWaitPage from "./pages/TapWaitPage"; // waiting for peers
 import FinishRecoveryPage from "./pages/FinishRecoveryPage"; // reset password
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+
+// ProtectedRoute component to redirect logged-in users away from auth pages
+function AuthRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsAuthenticated(!!token);
+  }, []);
+
+  if (isAuthenticated === null) return null; // Loading
+  if (isAuthenticated) return <Navigate to="/home" />; // Redirect logged-in users away from auth pages
+  return children;
+}
 
 // Internal app component that uses MetricsProvider & UIProvider
 function AppContent() {
@@ -157,8 +171,8 @@ function AppContent() {
       <main>
         <Routes>
           {/* ================= AUTH ================= */}
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/" element={<AuthRoute><LoginPage /></AuthRoute>} />
+          <Route path="/signup" element={<AuthRoute><SignupPage /></AuthRoute>} />
 
           {/* ================= DASHBOARD ================= */}
           <Route path="/home" element={<HomePage />} />

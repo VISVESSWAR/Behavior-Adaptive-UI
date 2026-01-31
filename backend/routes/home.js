@@ -6,6 +6,30 @@ import { generateQR } from "../utils/qr.js";
 export const router = express.Router();
 
 /**
+ * USER PROFILE: Get current user details
+ */
+router.get("/profile", requireAuth, async (req, res) => {
+  const userEmail = req.user.email;
+
+  const result = await pool.query(
+    `SELECT email, recovery_mode
+     FROM users WHERE email=$1`,
+    [userEmail]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const user = result.rows[0];
+  res.json({
+    email: user.email,
+    recovery_mode: user.recovery_mode,
+    created_at: user.created_at
+  });
+});
+
+/**
  * OPTION 1: List shared QR codes (acting as PEER)
  */
 router.get("/shared-qr", requireAuth, async (req, res) => {
