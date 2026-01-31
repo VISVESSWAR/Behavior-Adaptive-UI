@@ -326,6 +326,21 @@ export class MetricsCollector {
       actionSource = "idle";
       this.currentDQNAction = dqnAction;
       console.log(`[MetricsCollector] IDLE - Using noop action (0), DQN inference paused`);
+      
+      // 📊 Store decision source for debugger + RL analysis
+      if (typeof window !== "undefined") {
+        window.__metricsCollector = window.__metricsCollector || {};
+        window.__metricsCollector.lastDecisionInfo = {
+          modelProb: 0.4,
+          randomProb: 0.4,
+          antiProb: 0.2,
+          source: "idle",
+          dqnAction: dqnAction,
+          finalAction: finalAction,
+          isIdleGated: true,
+          timestamp: Date.now(),
+        };
+      }
     } else {
       // Not idle: proceed with DQN action request
       try {
@@ -352,11 +367,40 @@ export class MetricsCollector {
             console.log(
               `[MetricsCollector] ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}, Epsilon: ${explorationResult.epsilon.toFixed(3)}`
             );
+
+            // 📊 Store decision source for debugger + RL analysis
+            if (typeof window !== "undefined") {
+              window.__metricsCollector = window.__metricsCollector || {};
+              window.__metricsCollector.lastDecisionInfo = {
+                modelProb: 0.4,
+                randomProb: 0.4,
+                antiProb: 0.2,
+                source: actionSource, // "model" | "explore" | "idle" | "fallback" | "error"
+                dqnAction: dqnAction,
+                finalAction: finalAction,
+                epsilon: explorationResult.epsilon,
+                timestamp: Date.now(),
+              };
+            }
           } else {
             // Model action invalid, use noop
             finalAction = 0;
             actionSource = "fallback";
             console.log(`[MetricsCollector] DQN returned invalid action, using noop`);
+            
+            // 📊 Store decision source for debugger + RL analysis
+            if (typeof window !== "undefined") {
+              window.__metricsCollector = window.__metricsCollector || {};
+              window.__metricsCollector.lastDecisionInfo = {
+                modelProb: 0.4,
+                randomProb: 0.4,
+                antiProb: 0.2,
+                source: "fallback",
+                dqnAction: dqnAction,
+                finalAction: finalAction,
+                timestamp: Date.now(),
+              };
+            }
           }
         }
       } catch (error) {
@@ -364,6 +408,20 @@ export class MetricsCollector {
         dqnAction = -1; // Fallback to rule-based
         finalAction = 0;
         actionSource = "error";
+        
+        // 📊 Store decision source for debugger + RL analysis
+        if (typeof window !== "undefined") {
+          window.__metricsCollector = window.__metricsCollector || {};
+          window.__metricsCollector.lastDecisionInfo = {
+            modelProb: 0.4,
+            randomProb: 0.4,
+            antiProb: 0.2,
+            source: "error",
+            dqnAction: dqnAction,
+            finalAction: finalAction,
+            timestamp: Date.now(),
+          };
+        }
       }
     }
 

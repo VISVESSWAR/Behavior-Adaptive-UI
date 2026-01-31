@@ -14,6 +14,9 @@ export function AdaptationDebugger() {
   const [lastFeedback, setLastFeedback] = useState(null); // Track most recent feedback for UI feedback
   const [feedbackCount, setFeedbackCount] = useState({ like: 0, dislike: 0 });
 
+  //  Get decision source tracking
+  const decisionInfo = window.__metricsCollector?.lastDecisionInfo;
+
   // Debug: log persona status
   console.log("[AdaptationDebugger] Persona:", persona, "DQN Action:", dqnAction);
 
@@ -75,7 +78,12 @@ export function AdaptationDebugger() {
   }
 
   const m = persona.metrics;
-  const actionName = dqnAction >= 0 && dqnAction <= 9 ? Object.values(ACTION_SPACE)[dqnAction] : "none";
+  const modelActionName = dqnAction >= 0 && dqnAction <= 9 ? Object.values(ACTION_SPACE)[dqnAction] : "none";
+  const finalActionName = decisionInfo?.finalAction >= 0 && decisionInfo?.finalAction <= 9 
+    ? Object.values(ACTION_SPACE)[decisionInfo.finalAction] 
+    : "none";
+  // Use model action for display if decision info not available yet
+  const actionName = decisionInfo?.finalAction !== undefined ? finalActionName : modelActionName;
 
   return (
     <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white text-xs p-3 rounded-lg max-w-sm z-40 font-mono">
@@ -84,25 +92,46 @@ export function AdaptationDebugger() {
       {/* Persona Info */}
       <div className="mb-2 border-b border-gray-500 pb-2">
         <div>
-          👤 Persona: <span className="font-bold">{persona.persona || persona.type}</span>
+          Persona: <span className="font-bold">{persona.persona || persona.type}</span>
         </div>
-        <div>✓ Stable: {persona.stable ? "Yes ✅" : "No ⏳"}</div>
-        <div>🎯 Confidence: {(persona.confidence * 100).toFixed(0)}%</div>
+        <div> Stable: {persona.stable ? "Yes ✅" : "No ⏳"}</div>
+        <div> Confidence: {(persona.confidence * 100).toFixed(0)}%</div>
       </div>
 
       {/* DQN Status */}
       <div className="mb-2 border-b border-gray-500 pb-2">
-        <div className="font-semibold mb-1">🤖 DQN Model:</div>
+        <div className="font-semibold mb-1"> DQN Model:</div>
         <div>
-          Status: {dqnLoading ? "⏳ Predicting..." : "✅ Ready"}
+          Status: {dqnLoading ? " Predicting..." : " Ready"}
         </div>
         <div>
-          Action: {dqnAction >= 0 ? (
-            <span className="text-green-300">{dqnAction} ({actionName})</span>
+          Model Action: {dqnAction >= 0 ? (
+            <span className="text-blue-300">{dqnAction} ({modelActionName})</span>
           ) : (
             <span className="text-yellow-300">Using rules</span>
           )}
         </div>
+        {decisionInfo && (
+          <div className="mt-2 pt-2 border-t border-gray-600">
+            <div className="font-semibold text-green-300 mb-1">
+               Final Action: <span className="text-yellow-300">{decisionInfo.finalAction} ({finalActionName})</span>
+            </div>
+            <div className="text-cyan-300 text-xs font-semibold">
+               Policy Mix → M:{decisionInfo.modelProb.toFixed(1)} R:{decisionInfo.randomProb.toFixed(1)} A:{decisionInfo.antiProb.toFixed(1)}
+            </div>
+            <div className="text-xs mt-1">
+              Source:{" "}
+              <span className="font-bold text-yellow-300">
+                {decisionInfo.source === "model" && "🎯 MODEL (Exploit)"}
+                {decisionInfo.source === "explore" && "🎲 RANDOM (Explore)"}
+                {decisionInfo.source === "idle" && "😴 IDLE (Paused)"}
+                {decisionInfo.source === "fallback" && "⚠️ FALLBACK"}
+                {decisionInfo.source === "error" && "❌ ERROR"}
+                {!['model', 'explore', 'idle', 'fallback', 'error'].includes(decisionInfo.source) && decisionInfo.source}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Metrics (RL Input) */}
@@ -110,19 +139,19 @@ export function AdaptationDebugger() {
         <div className="mb-2 border-b border-gray-500 pb-2 text-xs">
           <div className="font-semibold mb-1">📊 Behavior Metrics:</div>
           <div>
-            🖱️ Velocity: {(m.vel_mean * 100).toFixed(0)}%
+             Velocity: {(m.vel_mean * 100).toFixed(0)}%
             {m.vel_mean < 0.3 && " ⚠️ Slow"}
           </div>
           <div>
-            😴 Idle Time: {(m.idle * 100).toFixed(0)}%
+             Idle Time: {(m.idle * 100).toFixed(0)}%
             {m.idle > 0.3 && " ⚠️ High"}
           </div>
           <div>
-            🤔 Hesitation: {(m.hesitation * 100).toFixed(0)}%
+            Hesitation: {(m.hesitation * 100).toFixed(0)}%
             {m.hesitation > 0.5 && " ⚠️ High"}
           </div>
           <div>
-            ❌ Misclicks: {(m.misclicks * 100).toFixed(0)}%
+             Misclicks: {(m.misclicks * 100).toFixed(0)}%
             {m.misclicks > 0.4 && " ⚠️ High"}
           </div>
         </div>
@@ -130,16 +159,16 @@ export function AdaptationDebugger() {
 
       {/* UI Config State */}
       <div className="text-xs">
-        <div className="font-semibold mb-1">🎨 UI Config:</div>
-        <div>📏 Button Size: {uiConfig.buttonSize}</div>
-        <div>🔤 Text Size: {uiConfig.textSize}</div>
-        <div>📊 Spacing: {uiConfig.spacing}</div>
-        <div>🔧 Font Weight: {uiConfig.fontWeight}</div>
-        <div>💬 Tooltips: {uiConfig.tooltips ? "On ✅" : "Off ❌"}</div>
+        <div className="font-semibold mb-1"> UI Config:</div>
+        <div> Button Size: {uiConfig.buttonSize}</div>
+        <div> Text Size: {uiConfig.textSize}</div>
+        <div> Spacing: {uiConfig.spacing}</div>
+        <div> Font Weight: {uiConfig.fontWeight}</div>
+        <div> Tooltips: {uiConfig.tooltips ? "On ✅" : "Off ❌"}</div>
       </div>
 
       <div className="text-xs mt-2 text-gray-400">
-        🧠 DQN + Rule-based adaptation active
+         DQN + Rule-based adaptation active
       </div>
 
       {/* Human-in-the-Loop Feedback */}
