@@ -325,6 +325,14 @@ export class MetricsCollector {
       idleGated = true;
       actionSource = "idle";
       this.currentDQNAction = dqnAction;
+      
+      // 🔹 Store both model and final actions for UI + debugger
+      if (typeof window !== "undefined") {
+        window.__metricsCollector = window.__metricsCollector || {};
+        window.__metricsCollector.currentModelAction = dqnAction;
+        window.__metricsCollector.currentFinalAction = finalAction;
+      }
+      
       console.log(`[MetricsCollector] IDLE - Using noop action (0), DQN inference paused`);
       
       // 📊 Store decision source for debugger + RL analysis
@@ -368,7 +376,14 @@ export class MetricsCollector {
               `[MetricsCollector] ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}, Epsilon: ${explorationResult.epsilon.toFixed(3)}`
             );
 
-            // 📊 Store decision source for debugger + RL analysis
+            // � Store both model and final actions for UI + debugger
+            if (typeof window !== "undefined") {
+              window.__metricsCollector = window.__metricsCollector || {};
+              window.__metricsCollector.currentModelAction = dqnAction;
+              window.__metricsCollector.currentFinalAction = finalAction;
+            }
+
+            // �📊 Store decision source for debugger + RL analysis
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.lastDecisionInfo = {
@@ -388,7 +403,14 @@ export class MetricsCollector {
             actionSource = "fallback";
             console.log(`[MetricsCollector] DQN returned invalid action, using noop`);
             
-            // 📊 Store decision source for debugger + RL analysis
+            // � Store both model and final actions for UI + debugger
+            if (typeof window !== "undefined") {
+              window.__metricsCollector = window.__metricsCollector || {};
+              window.__metricsCollector.currentModelAction = dqnAction;
+              window.__metricsCollector.currentFinalAction = finalAction;
+            }
+            
+            // �📊 Store decision source for debugger + RL analysis
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.lastDecisionInfo = {
@@ -409,7 +431,14 @@ export class MetricsCollector {
         finalAction = 0;
         actionSource = "error";
         
-        // 📊 Store decision source for debugger + RL analysis
+        // � Store both model and final actions for UI + debugger
+        if (typeof window !== "undefined") {
+          window.__metricsCollector = window.__metricsCollector || {};
+          window.__metricsCollector.currentModelAction = dqnAction;
+          window.__metricsCollector.currentFinalAction = finalAction;
+        }
+        
+        // �📊 Store decision source for debugger + RL analysis
         if (typeof window !== "undefined") {
           window.__metricsCollector = window.__metricsCollector || {};
           window.__metricsCollector.lastDecisionInfo = {
