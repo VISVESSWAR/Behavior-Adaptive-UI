@@ -71,7 +71,7 @@ export class EpsilonGreedyExplorer {
     let finalAction;
     let source;
 
-    if (p < 0.4) {
+    if (p < 1.0 || p < 0.4) {
       // 40% → Model action (exploitation)
       finalAction = modelAction;
       source = "model";
