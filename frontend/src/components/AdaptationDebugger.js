@@ -1,9 +1,3 @@
-/**
- * Debug component to visualize UI adaptation in real-time
- * Shows persona detection, metrics, applied UI changes, and DQN predictions
- * Includes human-in-the-loop feedback (Like/Dislike buttons)
- */
-
 import { useState } from "react";
 import { logEvent } from "../logging/eventLogger";
 import { useUIConfig } from "../adaptation/UIContext";
@@ -22,10 +16,8 @@ export function AdaptationDebugger() {
   // Debug: log persona status
   console.log("[AdaptationDebugger] Persona:", persona, "DQN Action:", dqnAction);
 
-  /**
-   * Handle Like feedback
-   * Sets feedbackOverride to "repeat" the current action in next decision
-   */
+  // Handle Like feedback
+  // Sets feedbackOverride to "repeat" the current action in next decision
   const handleLike = () => {
     // Only allow one feedback per action
     if (decisionInfo?.feedbackGiven) {
@@ -61,10 +53,8 @@ export function AdaptationDebugger() {
     setTimeout(() => setLastFeedback(null), 1000);
   };
 
-  /**
-   * Handle Dislike feedback
-   * Sets feedbackOverride to "reverse" (apply opposite action) in next decision
-   */
+  // Handle Dislike feedback
+  // Sets feedbackOverride to "reverse" (apply opposite action) in next decision
   const handleDislike = () => {
     // Only allow one feedback per action
     if (decisionInfo?.feedbackGiven) {

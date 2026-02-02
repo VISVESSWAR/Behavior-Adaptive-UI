@@ -5,10 +5,26 @@ import { requireAuth } from "../middleware/authMiddleware.js";
 
 export const router = express.Router();
 
-/**
- * GET /peer/share
- * Returns the QR share(s) assigned to the logged-in peer
- */
+// GET /peer/users
+// Returns list of all registered users (for transaction recipient dropdown)
+router.get("/users", requireAuth, async (req, res) => {
+  try {
+    const currentUserEmail = req.user.email;
+    
+    const result = await pool.query(
+      `SELECT email FROM users WHERE email != $1 ORDER BY email ASC`,
+      [currentUserEmail]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Get users error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /peer/share
+// Returns the QR share(s) assigned to the logged-in peer
 router.get("/share", requireAuth, async (req, res) => {
   try {
     const peerEmail = req.user.email; // set by auth middleware

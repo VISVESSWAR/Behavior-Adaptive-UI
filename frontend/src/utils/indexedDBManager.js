@@ -1,8 +1,4 @@
-/**
- * IndexedDB Manager for DQN Training Data
- * Stores collected transitions persistently in browser
- * Format: JSON (as per DQN spec)
- */
+// IndexedDB manager: store DQN training transitions persistently in browser (JSON format)
 
 class IndexedDBManager {
   constructor(dbName = "dqn_ui_data", version = 1) {
@@ -11,9 +7,7 @@ class IndexedDBManager {
     this.db = null;
   }
 
-  /**
-   * Initialize IndexedDB
-   */
+  // Initialize IndexedDB
   async init() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
@@ -64,16 +58,12 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Check if database connection is valid and open
-   */
+  // Check if database connection is valid and open
   isConnectionValid() {
     return this.db && !this.db.closed;
   }
 
-  /**
-   * Reconnect to database if connection is lost
-   */
+  // Reconnect to database if connection is lost
   async reconnect() {
     try {
       if (!this.isConnectionValid()) {
@@ -87,9 +77,7 @@ class IndexedDBManager {
     }
   }
 
-  /**
-   * Save a single transition with automatic reconnection
-   */
+  // Save a single transition with automatic reconnection
   async saveTransition(transition) {
     if (!this.isConnectionValid()) {
       console.warn("[IndexedDB] Database not initialized or connection closed, attempting reconnection...");
@@ -136,9 +124,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Save multiple transitions (batch) with automatic reconnection
-   */
+  // Save multiple transitions (batch) with automatic reconnection
   async saveTransitions(transitions) {
     if (!this.isConnectionValid()) {
       console.warn("[IndexedDB] Database not initialized or connection closed, attempting reconnection...");
@@ -194,9 +180,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Save session metadata
-   */
+  // Save session metadata
   async saveSession(sessionData) {
     if (!this.db) {
       console.warn("[IndexedDB] Database not initialized");
@@ -223,9 +207,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Get all transitions for a session
-   */
+  // Get all transitions for a session
   async getSessionTransitions(sessionId) {
     if (!this.db) {
       console.warn("[IndexedDB] Database not initialized");
@@ -252,9 +234,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Get all transitions (entire dataset) with connection validation
-   */
+  // Get all transitions (entire dataset) with connection validation
   async getAllTransitions() {
     // Check connection validity
     if (!this.isConnectionValid()) {
@@ -296,17 +276,13 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Get all records (alias for getAllTransitions)
-   * Used for generic data retrieval
-   */
+  // Get all records (alias for getAllTransitions)
+  // Used for generic data retrieval
   async getAll() {
     return this.getAllTransitions();
   }
 
-  /**
-   * Get all sessions
-   */
+  // Get all sessions
   async getAllSessions() {
     if (!this.db) {
       console.warn("[IndexedDB] Database not initialized");
@@ -328,13 +304,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Export all transitions as CSV with connection validation
-   * Format: matches dqn_state_cols_v2.json exactly
-   * 
-   * ⚠️ CRITICAL: Transitions store s and s_prime as ARRAYS, not objects
-   * CSV must index into arrays: s[0], s[1], ... s[14]
-   */
+  // Export stored transitions from IndexedDB as CSV (s,a,r,s_prime,done); states stored as arrays, not objects
   async exportAllAsCSV() {
     // Check connection validity
     if (!this.isConnectionValid()) {
@@ -410,9 +380,7 @@ class IndexedDBManager {
     return csv;
   }
 
-  /**
-   * Export all transitions as JSON with connection validation
-   */
+  // Export all transitions as JSON with connection validation
   async exportAllAsJSON() {
     // Check connection validity
     if (!this.isConnectionValid()) {
@@ -440,9 +408,7 @@ class IndexedDBManager {
     return data;
   }
 
-  /**
-   * Clear all transitions (careful!)
-   */
+  // Clear all transitions (careful!)
   async clearTransitions() {
     if (!this.db) {
       console.warn("[IndexedDB] Database not initialized");
@@ -465,9 +431,7 @@ class IndexedDBManager {
     });
   }
 
-  /**
-   * Get database statistics
-   */
+  // Get database statistics
   async getStats() {
     const allTransitions = await this.getAllTransitions();
     const allSessions = await this.getAllSessions();
@@ -489,10 +453,8 @@ class IndexedDBManager {
     return stats;
   }
 
-  /**
-   * Validate transition schema - detect data integrity issues
-   * ⚠️ CRITICAL: Run this to diagnose why exports are failing
-   */
+  // Validate transition schema - detect data integrity issues
+  // ⚠️ CRITICAL: Run this to diagnose why exports are failing
   async validateTransitions() {
     const transitions = await this.getAllTransitions();
     
@@ -555,11 +517,9 @@ class IndexedDBManager {
     return report;
   }
 
-  /**
-   * Print diagnostic info about stored data
-   * ⚠️ CRITICAL: Run in browser console to debug collection issues
-   * Usage: await dbManager.printDiagnostics()
-   */
+  // Print diagnostic info about stored data
+  // ⚠️ CRITICAL: Run in browser console to debug collection issues
+  // Usage: await dbManager.printDiagnostics()
   async printDiagnostics() {
     console.log("\n" + "=".repeat(80));
     console.log("INDEXEDDB DIAGNOSTICS");

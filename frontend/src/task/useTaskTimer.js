@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTask } from "./TaskContext";
 
-/**
- * Custom hook that tracks task elapsed time and timeout status
- * Returns elapsedTime (in ms) and timeout (boolean)
- * If elapsedTime exceeds timeLimit and task is not completed, marks as failed
- */
+// Track task elapsed time and timeout status; marks task as failed if timeLimit exceeded
 export function useTaskTimer() {
   const task = useTask();
   const [elapsedTime, setElapsedTime] = useState(0);

@@ -1,17 +1,6 @@
-/**
- * Reward Function for DQN Training - matches training logic exactly
- *
- * Computes reward from state transition and action (s_t, a_t, s_{t+1})
- * Uses same persona factors and thresholds as DQN model training
- */
+// Reward function for DQN training: computes reward from state transition (s_t, a_t, s_{t+1}) with persona factors
 
-/**
- * Compare two snapshots to detect meaningful state changes
- *
- * @param {Object} prev - previous snapshot
- * @param {Object} curr - current snapshot
- * @returns {boolean} true if significant change detected
- */
+// Detect meaningful state changes (metric, persona, or UI changes > 1% threshold)
 export function isStateDifferent(prev, curr) {
   if (!prev || !curr) return true;
 

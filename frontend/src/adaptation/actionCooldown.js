@@ -1,24 +1,11 @@
-/**
- * Action Cooldown System
- * 
- * Prevents repeated consecutive "up" actions (e.g., text_up, text_up, text_up...)
- * Ensures diversity in UI adaptation by cooldown-blocking recently-used actions
- * 
- * After an UP action is used: set cooldown to 3 decision cycles
- * Each decision cycle: reduce all cooldowns by 1 until 0
- * When selecting action: block actions with cooldown > 0
- */
+// Action Cooldown: prevents repeated "up" actions for 3 cycles; ensures UI adaptation diversity
 
 import { ACTION_SPACE, ACTION_ID_MAP } from "./actionSpace";
 
-/**
- * Manages cooldowns for all "up" actions to ensure diversity
- * Prevents rapid repeated increases in UI dimensions
- */
+// Track cooldowns for each "up" action to ensure diversity in UI adaptation
 export class ActionCooldownManager {
   constructor() {
-    // Track cooldown state for each UP action
-    // DOWN actions and noop are not cooldown-gated (they reduce UI)
+    // Cooldown state for UP actions; DOWN actions and noop not cooldown-gated
     this.cooldowns = {
       button_up: 0,    // action ID: 1
       text_up: 0,      // action ID: 3
@@ -31,11 +18,7 @@ export class ActionCooldownManager {
     this.cycleCount = 0;
   }
 
-  /**
-   * Apply cooldown to an action after it's used
-   * Called after action is actually applied to UI
-   * @param {number|string} actionId - The action that was applied
-   */
+  // Apply 3-cycle cooldown after action is used
   applyCooldown(actionId) {
     const actionName = typeof actionId === "string" ? actionId : ACTION_SPACE[actionId];
 
@@ -47,10 +30,7 @@ export class ActionCooldownManager {
     }
   }
 
-  /**
-   * Decrement all cooldowns by 1 (called once per decision cycle)
-   * Typical usage: every 10 seconds in snapshot collection
-   */
+  // Decrement all cooldowns by 1 per decision cycle (called every 10 seconds)
   tick() {
     this.cycleCount++;
 
@@ -67,32 +47,19 @@ export class ActionCooldownManager {
     }
   }
 
-  /**
-   * Check if an action is currently in cooldown
-   * @param {number|string} actionId - Action to check
-   * @returns {boolean} true if action is blocked by cooldown
-   */
+  // Check if action is on cooldown
   isOnCooldown(actionId) {
     const actionName = typeof actionId === "string" ? actionId : ACTION_SPACE[actionId];
     return this.cooldowns[actionName] > 0;
   }
 
-  /**
-   * Get remaining cooldown cycles for an action
-   * @param {number|string} actionId - Action to check
-   * @returns {number} remaining cycles (0 if not on cooldown)
-   */
+  // Get remaining cooldown cycles for action (0 if not on cooldown)
   getRemainingCooldown(actionId) {
     const actionName = typeof actionId === "string" ? actionId : ACTION_SPACE[actionId];
     return this.cooldowns[actionName] || 0;
   }
 
-  /**
-   * Filter action list to remove cooldown-blocked actions
-   * If all actions are blocked, returns noop (action 0)
-   * @param {number[]} actionList - List of action IDs to filter
-   * @returns {number[]} filtered actions with cooldown-blocked ones removed
-   */
+  // Filter action list: remove cooldown-blocked actions; return noop if all blocked
   filterBlockedActions(actionList) {
     const filtered = actionList.filter((actionId) => !this.isOnCooldown(actionId));
 
@@ -113,9 +80,7 @@ export class ActionCooldownManager {
     return filtered;
   }
 
-  /**
-   * Get current state as object (for debugging/logging)
-   */
+  // Get current state as object (for debugging/logging)
   getState() {
     return {
       cooldowns: { ...this.cooldowns },
@@ -125,9 +90,7 @@ export class ActionCooldownManager {
     };
   }
 
-  /**
-   * Reset all cooldowns (for testing or flow restart)
-   */
+  // Reset all cooldowns (for testing or flow restart)
   reset() {
     for (const action of Object.keys(this.cooldowns)) {
       this.cooldowns[action] = 0;
@@ -138,21 +101,13 @@ export class ActionCooldownManager {
   }
 }
 
-/**
- * Helper: Check if an action is an "up" action (increases UI)
- * @param {number|string} actionId - Action to check
- * @returns {boolean}
- */
+// Check if action is an "up" action (increases UI dimensions)
 export function isUpAction(actionId) {
   const name = typeof actionId === "string" ? actionId : ACTION_SPACE[actionId];
   return ["button_up", "text_up", "font_up", "spacing_up"].includes(name);
 }
 
-/**
- * Helper: Check if an action is a "down" action (decreases UI)
- * @param {number|string} actionId - Action to check
- * @returns {boolean}
- */
+// Check if action is a "down" action (decreases UI dimensions)
 export function isDownAction(actionId) {
   const name = typeof actionId === "string" ? actionId : ACTION_SPACE[actionId];
   return ["button_down", "text_down", "font_down", "spacing_down"].includes(name);

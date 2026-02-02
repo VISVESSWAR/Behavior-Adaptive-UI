@@ -1,10 +1,6 @@
 import crypto from "crypto";
 
-/**
- * Large prime for finite field arithmetic.
- * Must be larger than any possible secret.
- * (secp256k1 prime – standard, safe choice)
- */
+// Large prime for finite field arithmetic (secp256k1 prime – standard safe choice)
 const PRIME = BigInt(
   "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
 );
@@ -12,15 +8,13 @@ const PRIME = BigInt(
 // Safe modulo operation
 const mod = (x) => ((x % PRIME) + PRIME) % PRIME;
 
-/* ============================
-   SHAMIR SPLIT (UNCHANGED API)
-   ============================ */
+// Shamir split: polynomial coefficients f(x) = a0 + a1x + a2x² + ... (a0=secret, ai=random)
 export function shamirSplit(secretBuffer, n, k) {
   const secret = BigInt("0x" + secretBuffer.toString("hex"));
 
   if (k > n) throw new Error("Threshold k cannot exceed n");
 
-  // Polynomial coefficients: f(x) = a0 + a1x + a2x² + ...
+  // Polynomial coefficients: f(x) = a0 + a1x + a2x² + ... where a0=secret
   const coeffs = [secret];
   for (let i = 1; i < k; i++) {
     coeffs.push(
@@ -46,9 +40,7 @@ export function shamirSplit(secretBuffer, n, k) {
   return shares;
 }
 
-/* ============================
-   MODULAR INVERSE (SAFE)
-   ============================ */
+// Modular inverse computation with safe exponentiation
 function modPow(base, exp) {
   let result = 1n;
   base = mod(base);

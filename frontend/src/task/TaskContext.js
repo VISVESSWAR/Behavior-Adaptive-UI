@@ -11,9 +11,7 @@ export function TaskProvider({ children }) {
   const [attempts, setAttempts] = useState(0);
   const [failed, setFailed] = useState(false);
 
-  /**
-   * Start a new task with a given id and time limit (in milliseconds)
-   */
+  // Start task with id and time limit (in milliseconds)
   const startTask = (id, limit) => {
     setTaskId(id);
     setTaskStartTime(Date.now());
@@ -25,40 +23,30 @@ export function TaskProvider({ children }) {
     console.log(`[TaskContext] Started task: ${id}, limit: ${limit}ms`);
   };
 
-  /**
-   * Mark task as completed
-   */
+  // Mark task complete
   const completeTask = () => {
     setCompleted(true);
     console.log(`[TaskContext] Task completed: ${taskId}`);
   };
 
-  /**
-   * Log a step/page in the path sequence
-   */
+  // Log step in path sequence
   const logStep = (stepId) => {
     setPathSequence((prev) => [...prev, stepId]);
     console.log(`[TaskContext] Step logged: ${stepId}`);
   };
 
-  /**
-   * Mark task as failed (timeout or other reason)
-   */
+  // Mark task failed (timeout or error)
   const markFailed = () => {
     setFailed(true);
     console.log(`[TaskContext] Task marked as failed: ${taskId}`);
   };
 
-  /**
-   * Increment attempts counter
-   */
+  // Increment attempts counter
   const incrementAttempts = () => {
     setAttempts((prev) => prev + 1);
   };
 
-  /**
-   * Reset task state
-   */
+  // Reset task state
   const resetTask = () => {
     setTaskId(null);
     setTaskStartTime(null);

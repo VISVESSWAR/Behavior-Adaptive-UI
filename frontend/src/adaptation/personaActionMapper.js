@@ -1,9 +1,4 @@
-/**
- * Maps persona types to UI adaptation actions
- * Persona classification → Action selection logic
- * Also applies metric-specific adaptations (simulated RL rules)
- * Includes action cooldown system to prevent repeated UP actions
- */
+// Maps persona types to UI adaptation actions; applies metric-specific adaptations and action cooldown system
 
 import { ACTION_SPACE } from "./actionSpace";
 import { ActionCooldownManager } from "./actionCooldown";
@@ -11,15 +6,7 @@ import { ActionCooldownManager } from "./actionCooldown";
 // Global cooldown manager instance
 const cooldownManager = new ActionCooldownManager();
 
-/**
- * Get recommended actions based on persona type + metrics
- * WITH COOLDOWN FILTERING to prevent rapid repeated actions
- * 
- * @param {string} persona - "novice_old", "intermediate", "expert"
- * @param {object} metrics - adapted metrics {vel_mean, idle, hesitation, misclicks}
- * @param {ActionCooldownManager} cooldown - optional cooldown manager (uses global if not provided)
- * @returns {number[]} array of action IDs to apply (filtered by cooldown)
- */
+// Get actions for persona type with cooldown filtering to prevent repeated "up" actions
 export function getActionsForPersona(persona, metrics = null, cooldown = null) {
   const cm = cooldown || cooldownManager;
   const actions = [];
@@ -90,13 +77,7 @@ export function getActionsForPersona(persona, metrics = null, cooldown = null) {
   return cm.filterBlockedActions(selectedActions);
 }
 
-/**
- * Get personalized action history for a user
- * @param {string} persona - Current persona
- * @param {object} history - Previous adaptation actions
- * @param {ActionCooldownManager} cooldown - optional cooldown manager
- * @returns {number[]} filtered actions to apply
- */
+// Get contextual actions based on persona and history with cooldown filtering
 export function getContextualActions(persona, history = {}, cooldown = null) {
   const baseActions = getActionsForPersona(persona, null, cooldown);
 
@@ -105,10 +86,8 @@ export function getContextualActions(persona, history = {}, cooldown = null) {
   return baseActions;
 }
 
-/**
- * Get the global cooldown manager instance
- * @returns {ActionCooldownManager}
- */
+// Get the global cooldown manager instance
+// @returns {ActionCooldownManager}
 export function getCooldownManager() {
   return cooldownManager;
 }

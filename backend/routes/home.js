@@ -5,9 +5,7 @@ import { generateQR } from "../utils/qr.js";
 
 export const router = express.Router();
 
-/**
- * USER PROFILE: Get current user details
- */
+// USER PROFILE: Get current user details
 router.get("/profile", requireAuth, async (req, res) => {
   const userEmail = req.user.email;
 
@@ -29,9 +27,7 @@ router.get("/profile", requireAuth, async (req, res) => {
   });
 });
 
-/**
- * OPTION 1: List shared QR codes (acting as PEER)
- */
+// OPTION 1: List shared QR codes (acting as PEER)
 router.get("/shared-qr", requireAuth, async (req, res) => {
   const userEmail = req.user.email;
 
@@ -58,9 +54,7 @@ router.get("/shared-qr", requireAuth, async (req, res) => {
   res.json(qrList);
 });
 
-/**
- * OPTION 2: Peer details (acting as OWNER)
- */
+// OPTION 2: Peer details (acting as OWNER)
 router.get("/peer-details", requireAuth, async (req, res) => {
   const userEmail = req.user.email;
 

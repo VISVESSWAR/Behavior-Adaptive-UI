@@ -1,23 +1,9 @@
-/**
- * DQN Snapshot Schema & CSV Builder
- *
- * Correct approach:
- * 1. Frontend collects ONE snapshot every 10s (metrics + persona + action)
- * 2. Store snapshots chronologically in IndexedDB
- * 3. Build CSV by pairing consecutive snapshots
- * 4. Compute rewards from (s_t, a_t, s_{t+1}) + task rewards
- */
+// DQN Snapshot Schema: one snapshot/10s with (metrics + persona + action); CSV built from consecutive snapshot pairs
 
 import { isStateDifferent, computeReward } from "./rewardFunction";
 import { computeTaskReward } from "./taskReward";
 
-/**
- * SNAPSHOT SCHEMA (what gets collected in frontend)
- *
- * One snapshot per 10-second window
- * Contains: current metrics + applied action
- * NO "next_" fields (those come from the next snapshot)
- */
+// Snapshot schema: metrics + persona + action collected every 10 seconds
 export const SNAPSHOT_SCHEMA = {
   // Metadata
   timestamp: "number (ms)",
@@ -48,19 +34,10 @@ export const SNAPSHOT_SCHEMA = {
     stable: "boolean",
   },
 
-  // Action applied BEFORE this snapshot
-  // (i.e., the action that caused the state change from t-1 to t)
+  // Action applied before snapshot; action_t causes state_t→state_{t+1} (RL causality guarantee)
   action: "number (0-9, or -1 if no action)",
 
-  // RL CAUSALITY GUARANTEE:
-  // For transitions built from consecutive snapshots:
-  //   transition_t = (S_t, snapshot_t.action, S_{t+1})
-  // 
-  // snapshot_t.action is the DQN action CHOSEN at boundary t
-  // It will be applied during window t+1 to produce S_{t+1}
-  // This preserves: action_t causes state_t → state_{t+1}
-
-  // UI state after action was applied
+  // UI state after action applied
   uiState: {
     buttonSize: "number",
     textSize: "number",
@@ -73,9 +50,7 @@ export const SNAPSHOT_SCHEMA = {
   done: "boolean (true if flow completed/abandoned)",
 };
 
-/**
- * EXAMPLE SNAPSHOT (concrete values)
- */
+// EXAMPLE SNAPSHOT (concrete values)
 export const EXAMPLE_SNAPSHOT = {
   timestamp: 1705779000000,
   sessionId: "session_1705779000000_abc123",
@@ -115,10 +90,7 @@ export const EXAMPLE_SNAPSHOT = {
   done: false,
 };
 
-/**
- * SNAPSHOT → STATE VECTOR transformation
- * Converts one snapshot to 15-column state vector
- */
+// Convert snapshot to 15-column normalized state vector for DQN
 export function snapshotToStateVector(snapshot) {
   if (!snapshot || !snapshot.metrics || !snapshot.persona) {
     console.warn("[snapshotToStateVector] Invalid snapshot");
@@ -166,20 +138,9 @@ export function snapshotToStateVector(snapshot) {
   return normalized;
 }
 
-/**
- * TRANSITION BUILDER
- *
- * Takes array of snapshots and builds DQN transitions
- * by pairing consecutive snapshots
- */
+// Transition builder: pairs consecutive snapshots to build DQN transitions
 export class TransitionBuilder {
-  /**
-   * Build transitions from chronological snapshots
-   *
-   * @param {Array} snapshots - sorted by timestamp
-   * @param {Function} rewardFn - (s_t, a_t, s_{t+1}) => reward
-   * @returns {Array} transitions ready for CSV
-   */
+  // Build transitions from chronological snapshots by pairing consecutive states
   static buildTransitions(snapshots, rewardFn) {
     if (!snapshots || snapshots.length < 2) {
       console.warn("[TransitionBuilder] Need at least 2 snapshots");
@@ -260,10 +221,7 @@ export class TransitionBuilder {
     return transitions;
   }
 
-  /**
-   * Convert transitions to CSV format (47 columns)
-   * Format: s_cols | a | r | next_s_cols | done
-   */
+  // Convert transitions to CSV format (47 columns: s_cols | a | r | next_s_cols | done)
   static toCSV(transitions) {
     if (!transitions || transitions.length === 0) {
       console.warn("[TransitionBuilder] No transitions to export");
@@ -329,9 +287,7 @@ export class TransitionBuilder {
     return csv;
   }
 
-  /**
-   * Validate transitions (sanity checks)
-   */
+  // Validate transitions (sanity checks)
   static validate(transitions) {
     if (!transitions || transitions.length === 0) {
       return { valid: false, errors: ["No transitions"] };

@@ -9,28 +9,20 @@ import "../styles.css";
 const FLOW_ID = "transaction";
 const STEP_ID = "create";
 
-// Mock receiver suggestions
-const MOCK_RECEIVERS = [
-  { id: 1, name: "Alice Johnson", email: "alice@example.com" },
-  { id: 2, name: "Bob Smith", email: "bob@example.com" },
-  { id: 3, name: "Charlie Brown", email: "charlie@example.com" },
-  { id: 4, name: "Diana Prince", email: "diana@example.com" },
-  { id: 5, name: "Eve Wilson", email: "eve@example.com" },
-];
-
 export default function TransactionPage() {
   const task = useTask();
   const [amount, setAmount] = useState("");
   const [receiver, setReceiver] = useState("");
   const [note, setNote] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [peers, setPeers] = useState([]);
+  const [showPeersDropdown, setShowPeersDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [transactionActive, setTransactionActive] = useState(false);
   const [transactionTimer, setTransactionTimer] = useState(0);
+  const [peersLoading, setPeersLoading] = useState(true);
 
   // Start task on mount
   useEffect(() => {
@@ -42,7 +34,37 @@ export default function TransactionPage() {
     });
 
     task.startTask("transaction_task", 60000); // 60 second limit
+
+    // Fetch peers from API
+    fetchPeers();
   }, []);
+
+  // Fetch peers from backend
+  const fetchPeers = async () => {
+    try {
+      setPeersLoading(true);
+      const response = await fetch("http://localhost:5000/peer/users", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPeers(data);
+      } else {
+        console.error("Failed to fetch peers:", response.statusText);
+        setError("Failed to load peers list");
+      }
+    } catch (err) {
+      console.error("Error fetching peers:", err);
+      setError("Error loading peers list");
+    } finally {
+      setPeersLoading(false);
+    }
+  };
 
   // Auto-complete transaction after 10 seconds
   useEffect(() => {
@@ -65,53 +87,21 @@ export default function TransactionPage() {
     return () => clearInterval(interval);
   }, [transactionActive]);
 
-  /**
-   * Handle receiver input and show suggestions
-   */
-  const handleReceiverChange = (e) => {
-    const value = e.target.value;
-    setReceiver(value);
-
-    // Log step on typing
-    if (value.length > 0) {
-      task.logStep("receiver_type");
-    }
-
-    // Filter suggestions
-    if (value.length >= 2) {
-      const filtered = MOCK_RECEIVERS.filter(
-        (r) =>
-          r.name.toLowerCase().includes(value.toLowerCase()) ||
-          r.email.toLowerCase().includes(value.toLowerCase()),
-      );
-      setSuggestions(filtered);
-      setShowSuggestions(true);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  };
-
-  /**
-   * Handle suggestion selection
-   */
-  const handleSuggestionClick = (suggestion) => {
-    task.logStep("receiver_suggestion_click");
-    setReceiver(suggestion.email);
-    setSuggestions([]);
-    setShowSuggestions(false);
+  // Handle receiver selection from dropdown
+  const handleReceiverSelect = (peerEmail) => {
+    task.logStep("receiver_selected_from_dropdown");
+    setReceiver(peerEmail);
+    setShowPeersDropdown(false);
 
     logEvent({
       type: "receiver_selected",
       flowId: FLOW_ID,
       stepId: STEP_ID,
-      receiverEmail: suggestion.email,
+      receiverEmail: peerEmail,
     });
   };
 
-  /**
-   * Toggle advanced options
-   */
+  // Toggle advanced options
   const toggleAdvanced = () => {
     task.logStep("advanced_toggle");
     setShowAdvanced(!showAdvanced);
@@ -124,9 +114,7 @@ export default function TransactionPage() {
     });
   };
 
-  /**
-   * Auto-complete transaction (called at 10s)
-   */
+  // Auto-complete transaction (called at 10s)
   const completeTransactionAuto = () => {
     if (window.__metricsCollector) {
       const completedTxn = window.__metricsCollector.completeTransaction("auto");
@@ -144,9 +132,7 @@ export default function TransactionPage() {
     });
   };
 
-  /**
-   * User-initiated transaction completion
-   */
+  // User-initiated transaction completion
   const completeTransactionUser = () => {
     if (window.__metricsCollector) {
       const completedTxn = window.__metricsCollector.completeTransaction("user");
@@ -164,9 +150,7 @@ export default function TransactionPage() {
     });
   };
 
-  /**
-   * Handle form submission
-   */
+  // Handle form submission
   const handleSubmit = async () => {
     // Validation
     if (!amount || !receiver) {
@@ -278,18 +262,30 @@ export default function TransactionPage() {
           disabled={loading || success}
         />
 
-        {/* Receiver Field with Suggestions */}
+        {/* Receiver Field with Dropdown */}
         <div style={{ position: "relative", marginBottom: "10px" }}>
-          <AdaptiveInput
-            type="text"
-            placeholder="Receiver Email"
-            value={receiver}
-            onChange={handleReceiverChange}
-            disabled={loading || success}
-          />
+          <div
+            onClick={() => setShowPeersDropdown(!showPeersDropdown)}
+            style={{
+              padding: "10px",
+              border: "1px solid #ddd",
+              borderRadius: "4px",
+              backgroundColor: "white",
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              minHeight: "40px",
+              fontSize: "16px",
+              color: receiver ? "#000" : "#999",
+            }}
+          >
+            <span>{receiver || "Select Recipient"}</span>
+            <span style={{ fontSize: "12px" }}>{showPeersDropdown ? "▲" : "▼"}</span>
+          </div>
 
-          {/* Suggestions Dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
+          {/* Peers Dropdown */}
+          {showPeersDropdown && (
             <div
               style={{
                 position: "absolute",
@@ -300,35 +296,47 @@ export default function TransactionPage() {
                 border: "1px solid #ddd",
                 borderTop: "none",
                 borderRadius: "0 0 4px 4px",
-                maxHeight: "200px",
+                maxHeight: "250px",
                 overflowY: "auto",
                 zIndex: 1000,
                 boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
               }}
             >
-              {suggestions.map((suggestion) => (
-                <div
-                  key={suggestion.id}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  style={{
-                    padding: "10px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f0f0f0",
-                    backgroundColor: "white",
-                    transition: "background-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9f9f9";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "white";
-                  }}
-                >
-                  <strong>{suggestion.name}</strong>
-                  <br />
-                  <small style={{ color: "#666" }}>{suggestion.email}</small>
+              {peersLoading ? (
+                <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
+                  Loading peers...
                 </div>
-              ))}
+              ) : peers.length > 0 ? (
+                peers.map((peer) => (
+                  <div
+                    key={peer.email}
+                    onClick={() => handleReceiverSelect(peer.email)}
+                    style={{
+                      padding: "10px 15px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #f0f0f0",
+                      backgroundColor: receiver === peer.email ? "#e3f2fd" : "white",
+                      transition: "background-color 0.2s",
+                      fontWeight: receiver === peer.email ? "bold" : "normal",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (receiver !== peer.email) {
+                        e.currentTarget.style.backgroundColor = "#f9f9f9";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 
+                        receiver === peer.email ? "#e3f2fd" : "white";
+                    }}
+                  >
+                    {peer.email}
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
+                  No peers available
+                </div>
+              )}
             </div>
           )}
         </div>

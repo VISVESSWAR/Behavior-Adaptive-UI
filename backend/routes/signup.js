@@ -43,10 +43,19 @@ router.post("/", async (req, res) => {
        OPTION A — NORMAL USER (EMAIL OTP)
        ============================ */
     if (mode === "password") {
+      // Check if user already exists
+      const existingUser = await pool.query(
+        "SELECT email FROM users WHERE email=$1",
+        [email]
+      );
+      
+      if (existingUser.rowCount > 0) {
+        return res.status(400).json({ error: "User already registered" });
+      }
+
       await pool.query(
         `INSERT INTO users (email, password_hash, recovery_mode)
-         VALUES ($1,$2,'otp')
-         ON CONFLICT (email) DO NOTHING`,
+         VALUES ($1,$2,'otp')`,
         [email, passwordHash]
       );
 
@@ -60,12 +69,39 @@ router.post("/", async (req, res) => {
        OPTION B — PEER RECOVERY
        ============================ */
     if (mode === "peer") {
+      // Check if user already exists (one user-one recovery)
+      const existingUser = await pool.query(
+        "SELECT email FROM users WHERE email=$1",
+        [email]
+      );
+      
+      if (existingUser.rowCount > 0) {
+        return res.status(400).json({ 
+          error: "User already registered. One user can have only one recovery method." 
+        });
+      }
+
       if (!Array.isArray(peers) || peers.length !== numPeers) {
         return res.status(400).json({ error: "Peer count mismatch" });
       }
 
       if (threshold > numPeers) {
         return res.status(400).json({ error: "Threshold cannot exceed peers" });
+      }
+
+      // Check that all peer emails are different
+      const uniquePeers = new Set(peers);
+      if (uniquePeers.size !== peers.length) {
+        return res.status(400).json({ 
+          error: "All peer emails must be unique. Duplicate emails detected." 
+        });
+      }
+
+      // Check that user email is not in the peers list
+      if (peers.includes(email)) {
+        return res.status(400).json({ 
+          error: "User cannot be their own peer" 
+        });
       }
 
       // 🔍 Verify peers exist
@@ -88,8 +124,7 @@ router.post("/", async (req, res) => {
       await pool.query(
         `INSERT INTO users
          (email, password_hash, commitment, threshold, recovery_mode)
-         VALUES ($1,$2,$3,$4,'peer')
-         ON CONFLICT (email) DO NOTHING`,
+         VALUES ($1,$2,$3,$4,'peer')`,
         [email, passwordHash, commitment, threshold]
       );
 

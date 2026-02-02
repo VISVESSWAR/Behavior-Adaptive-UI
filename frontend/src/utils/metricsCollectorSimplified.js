@@ -1,17 +1,4 @@
-/**
- * Simplified Metrics Collector (Snapshot-Based)
- *
- * CORRECT APPROACH:
- * - Collect ONE snapshot every 10s (metrics + persona + action)
- * - Store snapshots chronologically
- * - CSV is built later by pairing consecutive snapshots
- * - Reward is computed post-hoc from (s_t, a_t, s_{t+1})
- * 
- * EXPLORATION:
- * - Uses epsilon-greedy strategy for action selection
- * - Balances exploitation (model action) vs exploration (random action)
- * - Epsilon decays over time to shift from exploration to exploitation
- */
+// Simplified Metrics Collector: Collect snapshots every 10s (metrics+persona+action), store chronologically, build CSV from consecutive snapshots, compute rewards post-hoc from (s_t, a_t, s_t+1)
 
 import { TransitionBuilder } from "./snapshotSchema.js";
 import IndexedDBManager from "./indexedDBManager.js";
@@ -37,16 +24,14 @@ const STATE_COL_ORDER = [
   "s_persona_expert"
 ];
 
-/**
- * Opposite action pairs for feedback-reverse
- * When user dislikes an action, we apply its opposite in next decision
- */
+// Opposite action pairs for feedback-reverse (user dislike → apply opposite)
 const oppositeActionMap = {
-  0: 1, 1: 0,  // text_down <-> text_up
-  2: 3, 3: 2,  // spacing_compact <-> spacing_spacious
-  4: 5, 5: 4,  // button_small <-> button_large
-  6: 7, 7: 6,  // font_light <-> font_heavy
-  8: 9, 9: 8,  // tooltips_off <-> tooltips_on
+  0: 0,        // noop → noop
+  1: 2, 2: 1,  // button_up ↔ button_down
+  3: 4, 4: 3,  // text_up ↔ text_down
+  5: 6, 6: 5,  // font_up ↔ font_down
+  7: 8, 8: 7,  // spacing_up ↔ spacing_down
+  9: 9,        // enable_tooltips → enable_tooltips
 };
 
 export class MetricsCollector {
@@ -74,14 +59,10 @@ export class MetricsCollector {
       completeReason: null, // "auto" or "user"
     };
     
-    // Human-in-the-loop feedback
-    // Most recent feedback from Like/Dislike buttons (default 0 = no feedback)
-    // Attached to next snapshot and used in RL training:
-    // final_reward = system_reward + 0.5 * feedback
+    // User feedback from Like/Dislike buttons (attached to snapshot for RL training)
     this.latestFeedback = 0;
     
-    // Feedback override for next decision (one-time effect)
-    // When user gives 👍 or 👎, influences the next action decision
+    // Feedback override for next decision: "repeat", "reverse", or "neutral" (one-time effect)
     this.feedbackOverride = {
       active: false,
       type: null, // "repeat" | "reverse" | "neutral"
@@ -107,10 +88,7 @@ export class MetricsCollector {
       });
   }
 
-  /**
-   * Update idle state (called by useIdleTimer hook)
-   * When idle, DQN inference is skipped and noop action (0) is used
-   */
+  // Update idle state: when idle, skip DQN inference and use noop action
   setIdleState(isIdle) {
     this.isIdle = isIdle;
     if (isIdle) {
@@ -120,21 +98,12 @@ export class MetricsCollector {
     }
   }
 
-  /**
-   * Set latest feedback from human-in-the-loop system
-   * Called when user clicks Like (+1) or Dislike (-1) buttons
-   * Attached to next snapshot for RL training
-   *
-   * @param {number} feedback - User feedback value: +1 (like), -1 (dislike), 0 (none)
-   */
+  // Set feedback from Like (+1) / Dislike (-1) buttons for RL training
   setLatestFeedback(feedback) {
     this.latestFeedback = feedback;
   }
 
-  /**
-   * Start a new transaction (tied to snapshot window)
-   * Called when user initiates a transaction (e.g., submit form)
-   */
+  // Start transaction tied to snapshot window (called on form submit)
   startTransaction() {
     const transactionId = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     this.transactionStatus = {
@@ -154,10 +123,7 @@ export class MetricsCollector {
     return transactionId;
   }
 
-  /**
-   * Complete current transaction
-   * @param {string} reason - "auto" for automatic (10s elapsed) or "user" for user-initiated
-   */
+  // Complete transaction: reason = "auto" (10s elapsed) or "user" (user-initiated)
   completeTransaction(reason = "auto") {
     if (!this.transactionStatus.active) {
       console.warn("[MetricsCollector] No active transaction to complete");
@@ -192,12 +158,7 @@ export class MetricsCollector {
     return completedTxn;
   }
 
-  /**
-   * Save transition with exponential backoff retry
-   * @param {Object} transition - The transition to save
-   * @param {number} maxRetries - Maximum number of retry attempts
-   * @param {number} initialDelay - Initial delay in ms (doubles each retry)
-   */
+  // Save transition with exponential backoff retry (max 3 retries, 100ms initial)
   async saveTransitionWithRetry(transition, maxRetries = 3, initialDelay = 100) {
     let lastError = null;
     
@@ -247,48 +208,32 @@ export class MetricsCollector {
     }
   }
 
-  /**
-   * Called by hooks to update current metrics
-   * (does NOT create snapshot yet)
-   */
+  // Update current metrics (does not create snapshot)
   updateMetrics(metrics) {
     this.windowMetrics = metrics;
   }
 
-  /**
-   * Called when UI action is applied
-   */
+  // Called when UI action is applied
   recordAction(actionId) {
     this.currentAction = actionId;
   }
 
-  /**
-   * Called with persona detection
-   */
+  // Called with persona detection
   updatePersona(persona) {
     this.currentPersona = persona;
   }
 
-  /**
-   * Called with current UI state
-   */
+  // Called with current UI state
   updateUIState(uiState) {
     this.currentUIState = uiState;
   }
 
-  /**
-   * Update task data for snapshot inclusion
-   */
+  // Update task data for snapshot inclusion
   updateTaskData(taskData) {
     this.currentTaskData = taskData;
   }
 
-  /**
-   * Calculate task-based reward
-   * +0.5 if completed
-   * -0.3 if timeout
-   * -0.01 × pathLength penalty
-   */
+  // Calculate task reward: +0.5 (complete), -0.3 (timeout), -0.01 × pathLength
   calculateTaskReward(taskData) {
     if (!taskData) return 0;
 
@@ -311,10 +256,8 @@ export class MetricsCollector {
     return reward;
   }
 
-  /**
-   * Check if it's time to collect a snapshot
-   * Call this from a timer or on user interaction
-   */
+  // Check if it's time to collect a snapshot
+  // Call this from a timer or on user interaction
   shouldCollect() {
     const shouldCollect = Date.now() - this.lastCollectionTime >= this.collectionInterval;
     if (shouldCollect) {
@@ -325,32 +268,7 @@ export class MetricsCollector {
     return shouldCollect;
   }
 
-  /**
-   * Collect ONE snapshot (if enough time has passed)
-   * CRITICAL: This is the ONLY place where:
-   * 1. Snapshots are created
-   * 2. DQN actions are fetched (tied to 10-second window)
-   * 3. Actions are recorded for RL training
-   * 4. Epsilon-greedy exploration is applied (DECAYS ONCE HERE per decision)
-   * 
-   * CRITICAL: ALWAYS collect snapshots, even during idle
-   * - Idle just gates the DQN action (set to 0) with flag
-   * - Never skip snapshots - preserves consistent 10-second decision cadence
-   * - RL training depends on consistent snapshot timing
-   * 
-   * IDLE GATING:
-   * - If isIdle is true, skip DQN inference
-   * - Use noop action (0) instead
-   * - Set isIdleGated flag for RL analysis
-   * - Do not log reward changes (freeze learning)
-   * 
-   * EPSILON-GREEDY:
-   * - After DQN action is received, apply exploration strategy
-   * - With probability eps: select random action (exploration)
-   * - With probability 1-eps: use model action (exploitation)
-   * - Decay epsilon ONCE per decision cycle (in explorer.selectAction)
-   * - Log action source and epsilon for RL analysis
-   */
+  // Collect snapshot: create DQN snapshot, fetch action, apply exploration, record for training; idle gates DQN to noop
   async collectSnapshot() {
     if (!this.shouldCollect()) {
       return null;
@@ -755,8 +673,6 @@ export class MetricsCollector {
 
       const s = this.buildStateVector(prev.metrics, prev.persona);
       const s_prime = this.buildStateVector(curr.metrics, curr.persona);
-
-      // ⚠️ CRITICAL: Only save if state vectors are valid (not null)
       if (s === null || s_prime === null) {
         console.warn(
           "[MetricsCollector] Skipping transition - invalid state vector (metrics/persona missing)"
@@ -765,21 +681,15 @@ export class MetricsCollector {
         const r_task = curr.taskReward ?? 0;
         const r_behavior = (curr.userFeedback ?? 0) * 0.5;
 
-        // 🎯 ENHANCED REWARD CALCULATION
-        // Base: task reward + user feedback
         let r = r_task + r_behavior;
 
-        // --- UI Saturation Penalty ---
         // Penalize actions that saturate UI dimensions (text, spacing, button changes)
-        // Encourages agent to avoid excessive styling
         if (curr.metrics?.uiSaturation) {
           const sat = curr.metrics.uiSaturation;
           const saturatedDims = ["text", "spacing", "button"]
             .filter(k => sat[k] !== null && sat[k] > 0.8).length;
           r -= 0.03 * saturatedDims;
         }
-
-        // --- Performance Micro Rewards ---
         // Reward good mouse control (low speed = precise movements)
         if (curr.metrics?.mouseSpeed !== null && curr.metrics.mouseSpeed < 0.4) {
           r += 0.02;
@@ -788,15 +698,10 @@ export class MetricsCollector {
         if (curr.metrics?.misclicks !== null && curr.metrics.misclicks > 2) {
           r -= 0.02;
         }
-
-        // --- Action Diversity Bonus ---
         // Encourage exploration by rewarding different actions
-        // prevAction is final action from previous snapshot
         if (prev.finalAction !== curr.finalAction) {
           r += 0.01;
         }
-
-        // --- Clamp to valid reward range ---
         r = Math.max(-1, Math.min(1, r));
 
         const transition = {
@@ -839,9 +744,7 @@ export class MetricsCollector {
     return snapshot;
   }
 
-  /**
-   * Build state vector matching DQN format
-   */
+  // Build state vector matching DQN format
   buildStateVector(metrics, persona) {
     if (!metrics || !persona) return null;
 
@@ -869,41 +772,29 @@ export class MetricsCollector {
     return STATE_COL_ORDER.map(k => s[k]);
   }
 
-  /**
-   * Mark flow as complete
-   */
+  // Mark flow as complete
   completeFlow() {
     if (this.snapshots.length > 0) {
       this.snapshots[this.snapshots.length - 1].done = true;
     }
   }
 
-  /**
-   * Get all collected snapshots
-   */
+  // Get all collected snapshots
   getSnapshots() {
     return this.snapshots;
   }
 
-  /**
-   * Get epsilon-greedy exploration statistics
-   * @returns {Object} explorer stats including epsilon, exploration rate, etc.
-   */
+  // Get epsilon-greedy exploration stats (epsilon, exploration rate, etc)
   getExplorerStats() {
     return this.explorer.getStats();
   }
 
-  /**
-   * Build transitions (for internal use or testing)
-   * @param {Function} rewardFn - (s_t, a_t, s_{t+1}) => reward
-   */
+  // Build transitions from snapshots using reward function (s_t, a_t, s_{t+1})
   buildTransitions(rewardFn) {
     return TransitionBuilder.buildTransitions(this.snapshots, rewardFn);
   }
 
-  /**
-   * Export as JSON (snapshots from current session only)
-   */
+  // Export as JSON (snapshots from current session only)
   toJSON() {
     return {
       metadata: {
@@ -917,10 +808,8 @@ export class MetricsCollector {
     };
   }
 
-  /**
-   * Export all transitions from IndexedDB as JSON
-   * ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
-   */
+  // Export all transitions from IndexedDB as JSON
+  // ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
   async exportStoredTransitionsAsJSON() {
     try {
       const data = await this.dbManager.exportAllAsJSON();
@@ -932,19 +821,15 @@ export class MetricsCollector {
     }
   }
 
-  /**
-   * Export as CSV (requires pairing + reward function)
-   * @param {Function} rewardFn - computes reward from transition
-   */
+  // Export as CSV (requires pairing + reward function)
+  // @param {Function} rewardFn - computes reward from transition
   toCSV(rewardFn) {
     const transitions = this.buildTransitions(rewardFn);
     return TransitionBuilder.toCSV(transitions);
   }
 
-  /**
-   * Export all transitions from IndexedDB as CSV
-   * ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
-   */
+  // Export all transitions from IndexedDB as CSV
+  // ⚠️ CRITICAL: This exports STORED transitions, not in-memory snapshots
   async exportStoredTransitionsAsCSV() {
     try {
       const csv = await this.dbManager.exportAllAsCSV();
@@ -960,11 +845,7 @@ export class MetricsCollector {
     }
   }
 
-  /**
-   * Validate snapshot consistency - ensures all fields are present
-   * ⚠️ CRITICAL: Call this before training to catch missing fields early
-   * @returns {object} validation report with any missing fields
-   */
+  // Validate snapshot consistency: check all fields present before training
   validate() {
     if (this.snapshots.length === 0) {
       return { valid: false, reason: "No snapshots collected" };
@@ -1027,10 +908,8 @@ export class MetricsCollector {
     };
   }
 
-  /**
-   * Print 10 random snapshots for debugging
-   * ⚠️ CRITICAL: Run this before training to verify all fields present
-   */
+  // Print 10 random snapshots for debugging
+  // ⚠️ CRITICAL: Run this before training to verify all fields present
   printSampleSnapshots() {
     if (this.snapshots.length === 0) {
       console.warn("[MetricsCollector] No snapshots to print");
@@ -1085,11 +964,7 @@ export class MetricsCollector {
     }
     console.log("=".repeat(80) + "\n");
   }
-  /**
-   * Print diagnostic information about collection status
-   * ⚠️ CRITICAL: Run this to debug why data is not being collected
-   * Usage: collector.printCollectionDiagnostics()
-   */
+  // Print collection diagnostics: check status, debug collection issues
   printCollectionDiagnostics() {
     console.log("\n" + "=".repeat(80));
     console.log("METRICS COLLECTOR DIAGNOSTICS");
@@ -1149,44 +1024,6 @@ export class MetricsCollector {
   }
 }
 
-/**
- * INTEGRATION EXAMPLE
- *
- * In App.js or UIContext.js:
- *
- *   const collector = new MetricsCollector("session_123", "transaction", "confirm");
- *
- *   // Hook updates metrics
- *   useEffect(() => {
- *     collector.updateMetrics(metrics);
- *   }, [metrics]);
- *
- *   // Action applied
- *   const handleAdaptation = (action) => {
- *     applyAction(action);
- *     collector.recordAction(action.id);
- *   };
- *
- *   // Persona updated
-
- *   useEffect(() => {
- *     collector.updatePersona(persona);
- *   }, [persona]);
- *
- *   // Periodic collection (every 10s)
- *   useEffect(() => {
- *     const timer = setInterval(() => {
- *       collector.collectSnapshot();
- *     }, 10000);
- *     return () => clearInterval(timer);
- *   }, []);
- *
- *   // On flow complete
- *   const handleComplete = () => {
- *     collector.completeFlow();
- *     const csv = collector.toCSV(rewardFunction);
- *     // save to IndexedDB
- *   };
- */
+// INTEGRATION: new MetricsCollector("session_123", "transaction", "confirm"); updateMetrics/Persona via useEffect hooks; collectSnapshot every 10s; export CSV on flow complete
 
 export default MetricsCollector;

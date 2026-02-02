@@ -1,9 +1,3 @@
-/**
- * UI Adaptation Schema
- * --------------------
- * This file defines all UI parameters that MAY be adapted in future phases.
- * No logic is applied here.
- */
 
 export const defaultUISchema = {
   buttonScale: 1.0,

@@ -1,22 +1,6 @@
-/**
- * Task Reward Function for DQN Training
- *
- * Computes reward based on task completion metrics
- * Incentivizes task completion while penalizing time overruns and long paths
- */
+// Task reward: +0.6 (complete), -0.4 (timeout), -0.01×pathLength; clipped to [-1, 1]
 
-/**
- * Compute task-specific reward
- *
- * @param {Object} task - Task data with structure:
- *   {
- *     completed: boolean,
- *     elapsedTime: number (seconds),
- *     timeLimit: number (seconds),
- *     pathLength: number (cumulative distance/actions)
- *   }
- * @returns {number} reward clipped to [-1, 1]
- */
+// Compute task reward based on completion, time, and path metrics
 export function computeTaskReward(task) {
   if (!task) return 0;
 

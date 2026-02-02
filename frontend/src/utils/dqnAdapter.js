@@ -1,7 +1,4 @@
-/**
- * DQN Adapter - Calls ML backend to get optimal action based on state vector
- * Converts metrics to state vector and fetches action from DQN model
- */
+// DQN Adapter: call ML backend to get optimal action from state vector; cache predictions for 500ms
 
 import { ACTION_SPACE } from "../adaptation/actionSpace";
 
@@ -11,12 +8,7 @@ const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many
 let lastPredictionTime = 0;
 let lastAction = -1;
 
-/**
- * Convert metrics to state vector format expected by DQN model
- * @param {object} metrics - raw metrics from useMouseTracker
- * @param {object} persona - persona object with type and metrics
- * @returns {number[]} state vector (15 elements)
- */
+// Convert metrics to normalized DQN state vector (15 elements)
 export function metricsToStateVector(metrics, persona) {
   if (!metrics || !persona) return null;
 
@@ -43,11 +35,7 @@ export function metricsToStateVector(metrics, persona) {
   return stateVector;
 }
 
-/**
- * Fetch action from DQN model backend
- * @param {number[]} stateVector - normalized state vector
- * @returns {Promise<number>} action ID (0-9)
- */
+// Fetch action from DQN model backend
 export async function getDQNAction(stateVector) {
   if (!stateVector) return -1;
 
@@ -81,11 +69,7 @@ export async function getDQNAction(stateVector) {
   }
 }
 
-/**
- * Convert action ID to action name string
- * @param {number} actionId - action ID (0-9)
- * @returns {string} action name or null
- */
+// Convert action ID to action name
 export function actionIdToName(actionId) {
   return Object.values(ACTION_SPACE).find((name, id) => id === actionId) || null;
 }
