@@ -2,9 +2,10 @@
 
 import { TransitionBuilder } from "./snapshotSchema.jsx";
 import IndexedDBManager from "./indexedDBManager.jsx";
-import { metricsToStateVector, getDQNAction } from "./dqnAdapter.jsx";
+import { metricsToStateVector, getDQNAction, decideFinalAction } from "./dqnAdapter.jsx";
 import EpsilonGreedyExplorer from "./epsilonGreedy.jsx";
 import { getCooldownManager } from "../adaptation/personaActionMapper.jsx";
+import { appendRLLog, exportRLLogs, clearRLLogs } from "./rlLogger.jsx";
 
 const STATE_COL_ORDER = [
   "s_session_duration",
@@ -73,6 +74,10 @@ export class MetricsCollector {
     this.explorer = new EpsilonGreedyExplorer(0.4, 0.1, 0.995);
     this.lastActionSource = null; // Track action source for logging
     
+    // Transaction path type assignment (random: bank_transfer, upi_payment, qr_payment)
+    this.pathType = this.assignPathType();
+    console.log(`[MetricsCollector] Assigned pathType: ${this.pathType}`);
+    
     this.dbManager = new IndexedDBManager();
     this.dbReady = false; // Track initialization state
     
@@ -96,6 +101,14 @@ export class MetricsCollector {
     } else {
       console.log("[MetricsCollector] Idle state cleared - DQN inference resumed");
     }
+  }
+
+  // Assign random transaction path type for experiment
+  assignPathType() {
+    const paths = ["bank_transfer", "upi_payment", "qr_payment"];
+    const pathType = paths[Math.floor(Math.random() * paths.length)];
+    console.log(`PATH: ${pathType}`);
+    return pathType;
   }
 
   // Set feedback from Like (+1) / Dislike (-1) buttons for RL training
@@ -427,14 +440,14 @@ export class MetricsCollector {
           this.currentDQNAction = dqnAction;
           console.log(`[MetricsCollector] DQN action fetched at snapshot time: ${dqnAction}`);
 
-          // EPSILON-GREEDY: Apply exploration strategy after getting model action
+          // EXPERIMENT MODE DECISION: Apply mode-specific strategy (model, random, or guided)
           if (dqnAction >= 0) {
-            const explorationResult = this.explorer.selectAction(dqnAction);
-            finalAction = explorationResult.action;
-            actionSource = explorationResult.source;
+            const decisionResult = decideFinalAction(dqnAction);
+            finalAction = decisionResult.finalAction;
+            actionSource = decisionResult.source;
             
             // Apply feedback override if active (one-time effect per action)
-            const override = applyFeedbackOverride(finalAction, explorationResult.epsilon);
+            const override = applyFeedbackOverride(finalAction, 0.4);
             finalAction = override.action;
             if (feedbackApplied) {
               actionSource = override.source;
@@ -444,14 +457,13 @@ export class MetricsCollector {
               modelAction: dqnAction,
               finalAction: finalAction,
               source: actionSource,
-              epsilon: explorationResult.epsilon,
-              nextEpsilon: explorationResult.nextEpsilon,
             };
 
-            const sourceLabel = actionSource === "model" ? "🎯 EXPLOIT" : "🎲 EXPLORE";
+            const sourceLabel = actionSource === "model" ? "🎯 MODEL" : actionSource === "random" ? "🎲 RANDOM" : "🎯 ANTI";
             console.log(
-              `[MetricsCollector] ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}, Epsilon: ${explorationResult.epsilon.toFixed(3)}`
+              `[MetricsCollector] ACTION SOURCE: ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}`
             );
+            console.log(`ACTION SOURCE: ${actionSource}`);
 
             // � Store both model and final actions for UI + debugger
             if (typeof window !== "undefined") {
@@ -464,13 +476,12 @@ export class MetricsCollector {
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.lastDecisionInfo = {
-                modelProb: 0.3,
-                randomProb: 0.5,
+                modelProb: 0.25,
+                randomProb: 0.55,
                 antiProb: 0.2,
-                source: actionSource, // "model" | "explore" | "idle" | "fallback" | "error"
+                source: actionSource, // "model" | "random" | "anti-model" | "feedback-repeat" | "feedback-reverse" | "idle"
                 dqnAction: dqnAction,
                 finalAction: finalAction,
-                epsilon: explorationResult.epsilon,
                 timestamp: Date.now(),
                 feedbackGiven: false,
               };
@@ -636,6 +647,9 @@ export class MetricsCollector {
         startTime: this.transactionStatus.startTime,
         completeReason: this.transactionStatus.completeReason,
       },
+      
+      // Transaction path type (experiment condition)
+      pathType: this.pathType,
 
       taskReward: taskReward,
 
@@ -726,6 +740,25 @@ export class MetricsCollector {
 
         // ⚠️ CRITICAL: Save with retry mechanism
         this.saveTransitionWithRetry(transition);
+
+        // 📊 Log RL data for experiment analysis (non-blocking, async)
+        // Append to memory buffer for export
+        const rlLogEntry = {
+          timestamp: curr.timestamp,
+          persona: curr.persona?.type || curr.persona?.persona || "unknown",
+          pathType: this.pathType,
+          modelAction: prev.dqnAction ?? -1,
+          finalAction: prev.finalAction ?? -1,
+          source: prev.actionSource || "unknown",
+          reward: r,
+          taskTime: curr.task?.elapsedTime || 0,
+          success: curr.task?.completed ? 1 : 0,
+        };
+        
+        // Non-blocking async log append
+        appendRLLog(rlLogEntry).catch(err => 
+          console.warn("[MetricsCollector] RL logging failed (non-critical):", err.message)
+        );
       }
     }
 
@@ -787,6 +820,17 @@ export class MetricsCollector {
   // Get epsilon-greedy exploration stats (epsilon, exploration rate, etc)
   getExplorerStats() {
     return this.explorer.getStats();
+  }
+
+  // Get RL logs as CSV string (experiment data export)
+  getRLLogsAsCSV() {
+    return exportRLLogs();
+  }
+
+  // Clear RL logs (reset for new experiment)
+  clearRLLogs() {
+    clearRLLogs();
+    console.log("[MetricsCollector] RL logs cleared");
   }
 
   // Build transitions from snapshots using reward function (s_t, a_t, s_{t+1})

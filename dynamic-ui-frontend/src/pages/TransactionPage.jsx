@@ -165,6 +165,10 @@ export default function TransactionPage() {
 
     task.logStep("submit_click");
 
+    // Get current pathType from metrics collector for logging
+    const pathType = window.__metricsCollector?.pathType || "unknown";
+    console.log(`PATH: ${pathType}`);
+
     logEvent({
       type: "transaction_submit",
       flowId: FLOW_ID,
@@ -172,12 +176,14 @@ export default function TransactionPage() {
       amount: parseFloat(amount),
       receiver,
       hasNote: note.length > 0,
+      pathType: pathType,
     });
 
     // Start transaction in metrics collector
     if (window.__metricsCollector) {
       const txnId = window.__metricsCollector.startTransaction();
       console.log("[TransactionPage] Transaction started:", txnId);
+      console.log(`[TransactionPage] Path type: ${pathType}`);
       setTransactionActive(true);
       setTransactionTimer(0);
     }

@@ -10,6 +10,7 @@ import { UIProvider, useUIConfig } from "./adaptation/UIContext.jsx";
 import { AdaptationDebugger } from "./components/AdaptationDebugger.jsx";
 import Navbar from "./components/Navbar.jsx";
 import MetricsCollector from "./utils/metricsCollectorSimplified.jsx";
+import { setupExperimentControl } from "./utils/experimentControl.jsx";
 
 import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
@@ -54,6 +55,10 @@ function AppContent() {
     metricsCollectorRef.current = metricsCollector;
     contextCollectorRef.current = metricsCollector;
     window.__metricsCollector = metricsCollector;
+    
+    // Initialize experiment control utilities
+    setupExperimentControl();
+    
     console.log(
       `[App] Initialized MetricsCollector with sessionId: ${sessionId}`,
     );
