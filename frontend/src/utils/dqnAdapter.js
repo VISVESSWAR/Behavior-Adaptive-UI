@@ -8,12 +8,16 @@ const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many
 let lastPredictionTime = 0;
 let lastAction = -1;
 
-// Convert metrics to normalized DQN state vector (15 elements)
-export function metricsToStateVector(metrics, persona) {
+// Convert metrics to normalized DQN state vector (19 elements)
+// Features 1-12: mouse behavior metrics
+// Features 13-15: persona one-hot encoding
+// Features 16-19: normalized UI levels (button, text, spacing, font)
+export function metricsToStateVector(metrics, persona, uiState) {
   if (!metrics || !persona) return null;
 
   // Normalize metrics to 0-1 scale
   const stateVector = [
+    // 1-12: Mouse behavior metrics
     Math.min(metrics.s_session_duration / 300, 1.0),           // 0: session_duration (max 5 mins)
     Math.min(metrics.s_total_distance / 20000, 1.0),           // 1: total_distance (max 20k px)
     Math.min(metrics.s_num_actions / 500, 1.0),                // 2: num_actions (max 500)
@@ -26,11 +30,18 @@ export function metricsToStateVector(metrics, persona) {
     Math.min(metrics.s_curve_mean / 0.5, 1.0),                 // 9: curve_mean (max 0.5)
     Math.min(metrics.s_curve_std / 0.5, 1.0),                  // 10: curve_std (max 0.5)
     Math.min(Math.abs(metrics.s_jerk_mean) / 1000, 1.0),       // 11: jerk_mean (max 1000, absolute)
-    // Persona one-hot encoding (12, 13, 14)
-    persona.type === "novice_old" || persona.persona === "novice_old" ? 1.0 : 0.0,   // 12: novice_old
-    persona.type === "intermediate" || persona.persona === "intermediate" ? 1.0 : 0.0, // 13: intermediate
-    persona.type === "expert" || persona.persona === "expert" ? 1.0 : 0.0,             // 14: expert
+    // 13-15: Persona one-hot encoding
+    persona.type === "novice_old" || persona.persona === "novice_old" ? 1.0 : 0.0,   // 12: persona_novice_old
+    persona.type === "intermediate" || persona.persona === "intermediate" ? 1.0 : 0.0, // 13: persona_intermediate
+    persona.type === "expert" || persona.persona === "expert" ? 1.0 : 0.0,             // 14: persona_expert
+    // 16-19: Normalized UI levels (0-6 range normalized to 0-1)
+    uiState ? (uiState.buttonSize || 0) / 6.0 : 0.0,            // 15: button_level
+    uiState ? (uiState.textSize || 0) / 6.0 : 0.0,              // 16: text_level
+    uiState ? (uiState.spacing || 0) / 6.0 : 0.0,               // 17: spacing_level
+    uiState ? (uiState.fontWeight || 0) / 6.0 : 0.0,            // 18: font_level
   ];
+
+  console.log("RL STATE LENGTH:", stateVector.length);
 
   return stateVector;
 }

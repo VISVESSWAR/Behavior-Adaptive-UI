@@ -421,7 +421,7 @@ export class MetricsCollector {
     } else {
       // Not idle: proceed with DQN action request
       try {
-        const stateVector = metricsToStateVector(this.windowMetrics, this.currentPersona);
+        const stateVector = metricsToStateVector(this.windowMetrics, this.currentPersona, this.currentUIState);
         if (stateVector) {
           dqnAction = await getDQNAction(stateVector);
           this.currentDQNAction = dqnAction;
