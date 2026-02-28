@@ -224,7 +224,7 @@ router.get("/tap/shares/:owner", async (req, res) => {
     `SELECT s.x, s.y
      FROM shares s
      JOIN recovery_requests r
-     ON s.peer_email = r.peer_email
+     ON s.peer_email = r.peer_email AND s.owner_email = r.owner_email
      WHERE r.owner_email=$1 AND r.status='approved'`,
     [owner]
   );
