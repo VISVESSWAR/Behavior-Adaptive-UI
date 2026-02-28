@@ -1,14 +1,17 @@
 // Experiment Mode Control: Utilities for switching between policies and exporting logs
 // Access via: window.__experimentControl
 
-import { EXPERIMENT_MODE } from "./dqnAdapter.jsx";
+import { getExperimentMode, setExperimentMode } from "./dqnAdapter.jsx";
 
 export const setupExperimentControl = () => {
   if (typeof window === "undefined") return;
 
   window.__experimentControl = {
     // Get current experiment mode
-    getMode: () => EXPERIMENT_MODE,
+    getMode: () => getExperimentMode(),
+    
+    // Set experiment mode
+    setMode: (mode) => setExperimentMode(mode),
 
     // Export RL logs as CSV
     exportRLLogs: () => {

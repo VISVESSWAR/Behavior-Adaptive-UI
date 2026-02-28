@@ -11,7 +11,22 @@ const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many
 // "model"  : Use model action directly (exploitation only)
 // "random" : Use random valid actions (exploration only)
 // "guided" : Use probabilistic mix (25% model, 55% random, 20% anti-model)
-export const EXPERIMENT_MODE = "guided"; // Change to "model" or "random" for different policies
+let EXPERIMENT_MODE = "guided"; // Change to "model" or "random" for different policies
+
+export function getExperimentMode() {
+  return EXPERIMENT_MODE;
+}
+
+export function setExperimentMode(mode) {
+  const validModes = ["model", "guided", "random"];
+  if (!validModes.includes(mode)) {
+    console.error(`[ExperimentControl] Invalid mode: "${mode}". Must be one of: ${validModes.join(", ")}`);
+    return false;
+  }
+  EXPERIMENT_MODE = mode;
+  console.log(`[ExperimentControl] Experiment mode set to: "${mode}"`);
+  return true;
+}
 
 let lastPredictionTime = 0;
 let lastAction = -1;
@@ -163,4 +178,18 @@ function getAntiModel(modelAction, validActions) {
 
   // Fallback to random if no valid opposite
   return validActions[Math.floor(Math.random() * validActions.length)];
+}
+
+// ============================================================
+// BROWSER CONSOLE API: Runtime experiment mode switching
+// ============================================================
+// Expose control functions to window for browser console access
+// Usage:
+//   window.setExperimentMode("model")
+//   window.setExperimentMode("guided")
+//   window.setExperimentMode("random")
+//   window.getExperimentMode()
+if (typeof window !== "undefined") {
+  window.setExperimentMode = setExperimentMode;
+  window.getExperimentMode = getExperimentMode;
 }

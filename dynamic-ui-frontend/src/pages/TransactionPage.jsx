@@ -9,6 +9,13 @@ import "../styles.css";
 const FLOW_ID = "transaction";
 const STEP_ID = "create";
 
+// Available transaction paths for multi-path experiment
+const TRANSACTION_PATHS = [
+  "bank_transfer",
+  "upi_payment",
+  "qr_payment"
+];
+
 export default function TransactionPage() {
   const task = useTask();
   const [amount, setAmount] = useState("");
@@ -23,6 +30,14 @@ export default function TransactionPage() {
   const [transactionActive, setTransactionActive] = useState(false);
   const [transactionTimer, setTransactionTimer] = useState(0);
   const [peersLoading, setPeersLoading] = useState(true);
+  
+  // Multi-path transaction support
+  const [pathType, setPathType] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [ifscCode, setIfscCode] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [qrScanned, setQrScanned] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
 
   // Start task on mount
   useEffect(() => {
@@ -34,6 +49,17 @@ export default function TransactionPage() {
     });
 
     task.startTask("transaction_task", 60000); // 60 second limit
+
+    // Get pathType from metrics collector if available, otherwise assign random one
+    let assignedPathType = null;
+    if (window.__metricsCollector?.pathType) {
+      assignedPathType = window.__metricsCollector.pathType;
+    } else {
+      assignedPathType = TRANSACTION_PATHS[Math.floor(Math.random() * TRANSACTION_PATHS.length)];
+    }
+    
+    setPathType(assignedPathType);
+    console.log("TRANSACTION PATH:", assignedPathType);
 
     // Fetch peers from API
     fetchPeers();
@@ -150,9 +176,11 @@ export default function TransactionPage() {
     });
   };
 
-  // Handle form submission
+  // Handle form submission for initial step (varies by path type)
   const handleSubmit = async () => {
-    // Validation
+    // Validation based on current path
+    let isValid = true;
+
     if (!amount || !receiver) {
       setError("Amount and receiver are required");
       return;
@@ -163,11 +191,80 @@ export default function TransactionPage() {
       return;
     }
 
+    // Path-specific validation
+    if (pathType === "bank_transfer" && currentStep === 0) {
+      // Step 1: Account number validation
+      setConfirmData({ amount, receiver });
+      setCurrentStep(1);
+      setError("");
+      return;
+    }
+
+    if (pathType === "bank_transfer" && currentStep === 1) {
+      // Step 2: IFSC code
+      if (!ifscCode) {
+        setError("IFSC code is required");
+        return;
+      }
+      setCurrentStep(2);
+      setError("");
+      return;
+    }
+
+    if (pathType === "bank_transfer" && currentStep === 2) {
+      // Step 3: Confirm
+      setCurrentStep(3);
+      setError("");
+      return;
+    }
+
+    if (pathType === "bank_transfer" && currentStep === 3) {
+      // Step 4: OTP
+      setCurrentStep(4);
+      setError("");
+      return;
+    }
+
+    if (pathType === "upi_payment" && currentStep === 0) {
+      // Step 1: UPI ID
+      if (!upiId) {
+        setError("UPI ID is required");
+        return;
+      }
+      setConfirmData({ amount, receiver, upiId });
+      setCurrentStep(1);
+      setError("");
+      return;
+    }
+
+    if (pathType === "upi_payment" && currentStep === 1) {
+      // Step 2: Confirm
+      setCurrentStep(2);
+      setError("");
+      return;
+    }
+
+    if (pathType === "qr_payment" && currentStep === 0) {
+      // Step 1: Simulate QR scan
+      setQrScanned(true);
+      setConfirmData({ amount, receiver, qrData: "QR_CODE_SCANNED" });
+      setCurrentStep(1);
+      setError("");
+      return;
+    }
+
+    if (pathType === "qr_payment" && currentStep === 1) {
+      // Step 2: Confirm
+      setCurrentStep(2);
+      setError("");
+      return;
+    }
+
+    // Final submission
     task.logStep("submit_click");
 
-    // Get current pathType from metrics collector for logging
-    const pathType = window.__metricsCollector?.pathType || "unknown";
-    console.log(`PATH: ${pathType}`);
+    const pathTypeLog = pathType || "unknown";
+    console.log(`PATH: ${pathTypeLog}`);
 
     logEvent({
       type: "transaction_submit",
@@ -176,14 +273,14 @@ export default function TransactionPage() {
       amount: parseFloat(amount),
       receiver,
       hasNote: note.length > 0,
-      pathType: pathType,
+      pathType: pathTypeLog,
     });
 
     // Start transaction in metrics collector
     if (window.__metricsCollector) {
       const txnId = window.__metricsCollector.startTransaction();
       console.log("[TransactionPage] Transaction started:", txnId);
-      console.log(`[TransactionPage] Path type: ${pathType}`);
+      console.log(`[TransactionPage] Path type: ${pathTypeLog}`);
       setTransactionActive(true);
       setTransactionTimer(0);
     }
@@ -203,6 +300,7 @@ export default function TransactionPage() {
         stepId: STEP_ID,
         amount: parseFloat(amount),
         receiver,
+        pathType: pathTypeLog,
       });
 
       // Reset form after 2 seconds
@@ -210,16 +308,81 @@ export default function TransactionPage() {
         setAmount("");
         setReceiver("");
         setNote("");
+        setIfscCode("");
+        setUpiId("");
+        setQrScanned(false);
         setShowAdvanced(false);
         setSuccess(false);
+        setCurrentStep(0);
+        setConfirmData(null);
       }, 2000);
     }, 1500);
+  };
+
+  // Determine step display
+  const getStepDisplay = () => {
+    if (!pathType) return "Loading...";
+    
+    if (pathType === "bank_transfer") {
+      const steps = ["Account", "IFSC", "Confirm", "OTP", "Success"];
+      return `${currentStep + 1}/${steps.length}`;
+    } else if (pathType === "upi_payment") {
+      const steps = ["UPI ID", "Confirm", "Success"];
+      return `${currentStep + 1}/${steps.length}`;
+    } else if (pathType === "qr_payment") {
+      const steps = ["Scan QR", "Confirm", "Success"];
+      return `${currentStep + 1}/${steps.length}`;
+    }
+    return "";
+  };
+
+  // Get button text based on path and step
+  const getButtonText = () => {
+    if (!pathType) return "Loading...";
+    
+    if (pathType === "bank_transfer") {
+      if (currentStep === 0) return "Enter Account";
+      if (currentStep === 1) return "Enter IFSC";
+      if (currentStep === 2) return "Confirm Details";
+      if (currentStep === 3) return "Verify OTP";
+      return "Send Transaction";
+    }
+    
+    if (pathType === "upi_payment") {
+      if (currentStep === 0) return "Enter UPI ID";
+      if (currentStep === 1) return "Confirm Payment";
+      return "Send Transaction";
+    }
+    
+    if (pathType === "qr_payment") {
+      if (currentStep === 0) return "Scan QR Code";
+      if (currentStep === 1) return "Confirm Payment";
+      return "Send Transaction";
+    }
+    
+    return "Send Transaction";
   };
 
   return (
     <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Create Transaction</AdaptiveHeading>
+        
+        {/* Path Type Badge */}
+        {pathType && (
+          <div style={{
+            padding: "8px 12px",
+            marginBottom: "15px",
+            backgroundColor: "#e8f4f8",
+            border: "1px solid #b3dfe8",
+            borderRadius: "4px",
+            fontSize: "12px",
+            color: "#0277bd",
+            fontWeight: "bold"
+          }}>
+            💳 Path: {pathType.replace(/_/g, " ").toUpperCase()} | Step {getStepDisplay()}
+          </div>
+        )}
 
         {success && (
           <div
@@ -251,119 +414,224 @@ export default function TransactionPage() {
           </div>
         )}
 
-        {/* Amount Field */}
-        <AdaptiveInput
-          type="number"
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          onFocus={() => {
-            task.logStep("amount_focus");
-            logEvent({
-              type: "focus_amount",
-              flowId: FLOW_ID,
-              stepId: STEP_ID,
-            });
-          }}
-          disabled={loading || success}
-        />
-
-        {/* Receiver Field with Dropdown */}
-        <div style={{ position: "relative", marginBottom: "10px" }}>
-          <div
-            onClick={() => setShowPeersDropdown(!showPeersDropdown)}
-            style={{
-              padding: "10px",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              backgroundColor: "white",
-              cursor: "pointer",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              minHeight: "40px",
-              fontSize: "16px",
-              color: receiver ? "#000" : "#999",
+        {/* Amount Field - Always visible for first step */}
+        {(pathType === "bank_transfer" && currentStep === 0) ||
+         (pathType === "upi_payment" && currentStep === 0) ||
+         (pathType === "qr_payment" && currentStep === 0) ? (
+          <AdaptiveInput
+            type="number"
+            placeholder="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            onFocus={() => {
+              task.logStep("amount_focus");
+              logEvent({
+                type: "focus_amount",
+                flowId: FLOW_ID,
+                stepId: STEP_ID,
+              });
             }}
-          >
-            <span>{receiver || "Select Recipient"}</span>
-            <span style={{ fontSize: "12px" }}>{showPeersDropdown ? "▲" : "▼"}</span>
-          </div>
+            disabled={loading || success || transactionActive}
+          />
+        ) : null}
 
-          {/* Peers Dropdown */}
-          {showPeersDropdown && (
+        {/* Receiver Field - Always visible for first step */}
+        {(pathType === "bank_transfer" && currentStep === 0) ||
+         (pathType === "upi_payment" && currentStep === 0) ||
+         (pathType === "qr_payment" && currentStep === 0) ? (
+          <div style={{ position: "relative", marginBottom: "10px" }}>
             <div
+              onClick={() => setShowPeersDropdown(!showPeersDropdown)}
               style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                backgroundColor: "white",
+                padding: "10px",
                 border: "1px solid #ddd",
-                borderTop: "none",
-                borderRadius: "0 0 4px 4px",
-                maxHeight: "250px",
-                overflowY: "auto",
-                zIndex: 1000,
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                borderRadius: "4px",
+                backgroundColor: "white",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                minHeight: "40px",
+                fontSize: "16px",
+                color: receiver ? "#000" : "#999",
               }}
             >
-              {peersLoading ? (
-                <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
-                  Loading peers...
-                </div>
-              ) : peers.length > 0 ? (
-                peers.map((peer) => (
-                  <div
-                    key={peer.email}
-                    onClick={() => handleReceiverSelect(peer.email)}
-                    style={{
-                      padding: "10px 15px",
-                      cursor: "pointer",
-                      borderBottom: "1px solid #f0f0f0",
-                      backgroundColor: receiver === peer.email ? "#e3f2fd" : "white",
-                      transition: "background-color 0.2s",
-                      fontWeight: receiver === peer.email ? "bold" : "normal",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (receiver !== peer.email) {
-                        e.currentTarget.style.backgroundColor = "#f9f9f9";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 
-                        receiver === peer.email ? "#e3f2fd" : "white";
-                    }}
-                  >
-                    {peer.email}
-                  </div>
-                ))
-              ) : (
-                <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
-                  No peers available
-                </div>
-              )}
+              <span>{receiver || "Select Recipient"}</span>
+              <span style={{ fontSize: "12px" }}>{showPeersDropdown ? "▲" : "▼"}</span>
             </div>
-          )}
-        </div>
 
-        {/* Advanced Options Toggle */}
-        <AdaptiveButton
-          onClick={toggleAdvanced}
-          style={{
-            background: "#f0f0f0",
-            color: "#333",
-            marginBottom: "10px",
-            width: "100%",
-            textAlign: "left",
-          }}
-          disabled={loading || success}
-        >
-          {showAdvanced ? "▼" : "▶"} Advanced Options
-        </AdaptiveButton>
+            {/* Peers Dropdown */}
+            {showPeersDropdown && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "white",
+                  border: "1px solid #ddd",
+                  borderTop: "none",
+                  borderRadius: "0 0 4px 4px",
+                  maxHeight: "250px",
+                  overflowY: "auto",
+                  zIndex: 1000,
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              >
+                {peersLoading ? (
+                  <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
+                    Loading peers...
+                  </div>
+                ) : peers.length > 0 ? (
+                  peers.map((peer) => (
+                    <div
+                      key={peer.email}
+                      onClick={() => handleReceiverSelect(peer.email)}
+                      style={{
+                        padding: "10px 15px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid #f0f0f0",
+                        backgroundColor: receiver === peer.email ? "#e3f2fd" : "white",
+                        transition: "background-color 0.2s",
+                        fontWeight: receiver === peer.email ? "bold" : "normal",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (receiver !== peer.email) {
+                          e.currentTarget.style.backgroundColor = "#f9f9f9";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 
+                          receiver === peer.email ? "#e3f2fd" : "white";
+                      }}
+                    >
+                      {peer.email}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ padding: "10px", textAlign: "center", color: "#999" }}>
+                    No peers available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {/* BANK TRANSFER PATH - Step 1: IFSC Code */}
+        {pathType === "bank_transfer" && currentStep === 1 && (
+          <AdaptiveInput
+            type="text"
+            placeholder="IFSC Code (e.g., SBIN0001234)"
+            value={ifscCode}
+            onChange={(e) => setIfscCode(e.target.value)}
+            disabled={loading || success || transactionActive}
+          />
+        )}
+
+        {/* BANK TRANSFER PATH - Step 2: Confirm Details */}
+        {pathType === "bank_transfer" && currentStep === 2 && confirmData && (
+          <div style={{
+            padding: "12px",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "4px",
+            marginBottom: "15px",
+            fontSize: "14px"
+          }}>
+            <div style={{ marginBottom: "8px" }}><strong>Amount:</strong> ₹{confirmData.amount}</div>
+            <div style={{ marginBottom: "8px" }}><strong>Recipient:</strong> {confirmData.receiver}</div>
+            <div><strong>IFSC:</strong> {ifscCode}</div>
+          </div>
+        )}
+
+        {/* BANK TRANSFER PATH - Step 3: OTP Verification */}
+        {pathType === "bank_transfer" && currentStep === 3 && (
+          <AdaptiveInput
+            type="text"
+            placeholder="Enter OTP (any 4 digits)"
+            maxLength="4"
+            disabled={loading || success || transactionActive}
+          />
+        )}
+
+        {/* UPI PAYMENT PATH - Step 0: UPI ID Input */}
+        {pathType === "upi_payment" && currentStep === 0 && (
+          <AdaptiveInput
+            type="text"
+            placeholder="UPI ID (e.g., user@bankname)"
+            value={upiId}
+            onChange={(e) => setUpiId(e.target.value)}
+            disabled={loading || success || transactionActive}
+          />
+        )}
+
+        {/* UPI PAYMENT PATH - Step 1: Confirm */}
+        {pathType === "upi_payment" && currentStep === 1 && confirmData && (
+          <div style={{
+            padding: "12px",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "4px",
+            marginBottom: "15px",
+            fontSize: "14px"
+          }}>
+            <div style={{ marginBottom: "8px" }}><strong>Amount:</strong> ₹{confirmData.amount}</div>
+            <div style={{ marginBottom: "8px" }}><strong>Recipient:</strong> {confirmData.receiver}</div>
+            <div><strong>UPI ID:</strong> {confirmData.upiId}</div>
+          </div>
+        )}
+
+        {/* QR PAYMENT PATH - Step 0: QR Scan */}
+        {pathType === "qr_payment" && currentStep === 0 && (
+          <div style={{
+            padding: "20px",
+            backgroundColor: "#f0f0f0",
+            borderRadius: "4px",
+            textAlign: "center",
+            marginBottom: "15px"
+          }}>
+            <div style={{ fontSize: "48px", marginBottom: "10px" }}>📱</div>
+            <AdaptiveParagraph>Click "Scan QR Code" to simulate QR scanning</AdaptiveParagraph>
+          </div>
+        )}
+
+        {/* QR PAYMENT PATH - Step 1: Confirm after QR scan */}
+        {pathType === "qr_payment" && currentStep === 1 && (
+          <div style={{
+            padding: "12px",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "4px",
+            marginBottom: "15px",
+            fontSize: "14px"
+          }}>
+            <div style={{ marginBottom: "8px" }}><strong>Amount:</strong> ₹{confirmData.amount}</div>
+            <div style={{ marginBottom: "8px" }}><strong>Recipient:</strong> {confirmData.receiver}</div>
+            <div style={{ marginBottom: "8px", color: "#2196f3" }}>✓ QR Code Scanned</div>
+          </div>
+        )}
+
+        {/* Advanced Options Toggle - Only show on initial step */}
+        {((pathType === "bank_transfer" && currentStep === 0) ||
+          (pathType === "upi_payment" && currentStep === 0) ||
+          (pathType === "qr_payment" && currentStep === 0)) && (
+          <AdaptiveButton
+            onClick={toggleAdvanced}
+            style={{
+              background: "#f0f0f0",
+              color: "#333",
+              marginBottom: "10px",
+              width: "100%",
+              textAlign: "left",
+            }}
+            disabled={loading || success || transactionActive}
+          >
+            {showAdvanced ? "▼" : "▶"} Advanced Options
+          </AdaptiveButton>
+        )}
 
         {/* Advanced Options Section - Collapsible */}
-        {showAdvanced && (
+        {showAdvanced && ((pathType === "bank_transfer" && currentStep === 0) ||
+          (pathType === "upi_payment" && currentStep === 0) ||
+          (pathType === "qr_payment" && currentStep === 0)) && (
           <div style={{ marginBottom: "15px" }}>
             <AdaptiveInput
               placeholder="Note (Optional)"
@@ -377,7 +645,7 @@ export default function TransactionPage() {
                   stepId: STEP_ID,
                 });
               }}
-              disabled={loading || success}
+              disabled={loading || success || transactionActive}
             />
           </div>
         )}
@@ -391,7 +659,7 @@ export default function TransactionPage() {
             cursor: loading || success || transactionActive ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Processing..." : success ? "Sent!" : "Send Transaction"}
+          {loading ? "Processing..." : success ? "Sent!" : getButtonText()}
         </AdaptiveButton>
 
         {/* Transaction Status Display */}
@@ -453,7 +721,7 @@ export default function TransactionPage() {
 
         {/* Info */}
         <AdaptiveParagraph style={{ marginTop: "15px", fontSize: "12px" }}>
-          This is a demo transaction form. No real transactions are processed.
+          This is a demo transaction form using {pathType ? pathType.replace(/_/g, " ") : "a transaction"} path. No real transactions are processed.
         </AdaptiveParagraph>
       </div>
     </div>

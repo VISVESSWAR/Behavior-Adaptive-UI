@@ -3,6 +3,7 @@ import { useMetricsCollector } from "../context/MetricsContext.jsx";
 import IndexedDBManager from "../utils/indexedDBManager.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
+import ExperimentModeControl from "../components/ExperimentModeControl.jsx";
 
 function fmt(v, d = 2) {
   return typeof v === "number" ? v.toFixed(d) : "0.00";
@@ -100,6 +101,11 @@ export default function DashboardPage() {
       <AdaptiveParagraph style={{ marginBottom: "30px", color: "#666" }}>
         Real-time behavioral metrics and user analytics
       </AdaptiveParagraph>
+
+      {/* ========== EXPERIMENT MODE CONTROL ========== */}
+      <div style={{ marginBottom: "40px" }}>
+        <ExperimentModeControl />
+      </div>
 
       {/* ========== REAL-TIME METRICS CARDS ========== */}
       <div
