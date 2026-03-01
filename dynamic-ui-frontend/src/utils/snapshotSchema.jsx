@@ -254,6 +254,7 @@ export class TransitionBuilder {
     const header = [
       ...stateColumns,
       "action",
+      "experimentMode",
       "reward_behavior",
       "reward_task",
       "reward_combined",
@@ -267,10 +268,14 @@ export class TransitionBuilder {
       const s_prime_values = stateColumns.map((col) =>
         (t.s_prime[col] ?? 0).toFixed(6),
       );
+      
+      // Extract experiment mode from transition metadata
+      const experimentMode = t.metadata?.experimentMode || "unknown";
 
       return [
         ...s_values,
         t.a,
+        experimentMode,
         (t.r_behavior ?? t.r).toFixed(6), // behavior reward
         (t.r_task ?? 0).toFixed(6), // task reward
         t.r.toFixed(6), // combined reward

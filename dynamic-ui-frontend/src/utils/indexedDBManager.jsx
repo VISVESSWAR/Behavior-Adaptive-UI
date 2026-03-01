@@ -347,6 +347,7 @@ class IndexedDBManager {
     const header = [
       ...stateColumns,
       "action",
+      "experimentMode",
       "reward",
       ...nextStateColumns,
       "done",
@@ -366,8 +367,11 @@ class IndexedDBManager {
       
       // s_prime is an array of 15 values
       const nextStateValues = t.s_prime.slice(0, 15);
+      
+      // Extract experiment mode from transition metadata
+      const experimentMode = t.metadata?.experimentMode || "unknown";
 
-      return [...stateValues, t.a, t.r, ...nextStateValues, t.done ? 1 : 0]
+      return [...stateValues, t.a, experimentMode, t.r, ...nextStateValues, t.done ? 1 : 0]
         .map((v) => (typeof v === "number" ? v.toFixed(6) : v))
         .join(",");
     }).filter(row => row !== null);
@@ -396,10 +400,18 @@ class IndexedDBManager {
     const transitions = await this.getAllTransitions();
     const sessions = await this.getAllSessions();
 
+    // Aggregate experiment mode breakdown across all transitions
+    const experimentModeBreakdown = {};
+    transitions.forEach(t => {
+      const mode = t.metadata?.experimentMode || "unknown";
+      experimentModeBreakdown[mode] = (experimentModeBreakdown[mode] || 0) + 1;
+    });
+
     const data = {
       exportedAt: new Date().toISOString(),
       transitionCount: transitions.length,
       sessionCount: sessions.length,
+      experimentModeBreakdown,
       transitions,
       sessions,
     };

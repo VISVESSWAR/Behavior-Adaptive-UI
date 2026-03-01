@@ -3,7 +3,7 @@
 
 import { TransitionBuilder } from "./snapshotSchema.jsx";
 import IndexedDBManager from "./indexedDBManager.jsx";
-import { metricsToStateVector, getDQNAction, decideFinalAction } from "./dqnAdapter.jsx";
+import { metricsToStateVector, getDQNAction, decideFinalAction, getExperimentMode } from "./dqnAdapter.jsx";
 import EpsilonGreedyExplorer from "./epsilonGreedy.jsx";
 import { getCooldownManager } from "../adaptation/personaActionMapper.jsx";
 import { appendRLLog, exportRLLogs, clearRLLogs } from "./rlLogger.jsx";
@@ -605,6 +605,10 @@ export class MetricsCollector {
             : this.currentPersona?.confidence,
       },
 
+      // Experiment mode (affects action selection strategy)
+      // "model" | "guided" | "random"
+      experimentMode: getExperimentMode(),
+
       // CRITICAL: For RL training, use finalAction (after epsilon-greedy)
       // finalAction will be applied during the NEXT window and influence the next state
       // This preserves causality: (S_t, A_t, S_{t+1}) where A_t is finalAction from THIS snapshot
@@ -737,6 +741,7 @@ export class MetricsCollector {
             sessionId: curr.sessionId,
             flowId: curr.flowId,
             stepId: curr.stepId,
+            experimentMode: curr.experimentMode || getExperimentMode(),
             explorationData: prev.explorationData || null,
           }
         };
@@ -749,6 +754,7 @@ export class MetricsCollector {
         const rlLogEntry = {
           timestamp: curr.timestamp,
           persona: curr.persona?.type || curr.persona?.persona || "unknown",
+          experimentMode: curr.experimentMode || getExperimentMode(),
           pathType: this.pathType,
           modelAction: prev.dqnAction ?? -1,
           finalAction: prev.finalAction ?? -1,
@@ -842,6 +848,7 @@ export class MetricsCollector {
   }
 
   // Export as JSON (snapshots from current session only)
+  // Includes experiment mode in metadata and each snapshot
   toJSON() {
     return {
       metadata: {
@@ -849,6 +856,7 @@ export class MetricsCollector {
         flowId: this.flowId,
         createdAt: new Date().toISOString(),
         snapshotCount: this.snapshots.length,
+        experimentMode: getExperimentMode(), // Current experiment mode
         explorationStats: this.getExplorerStats(),
       },
       snapshots: this.snapshots,
