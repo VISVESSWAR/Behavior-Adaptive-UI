@@ -2,12 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useTask } from "./task/TaskContext.jsx";
 import { MetricsProvider, useMetricsCollector } from "./context/MetricsContext.jsx";
+import { HelpTooltipProvider } from "./context/HelpTooltipContext.jsx";
 import useMouseTracker from "./hooks/useMouseTracker.jsx";
 import useIdleTimer from "./hooks/useIdleTimer.jsx";
 import useScrollDepth from "./hooks/useScrollDepth.jsx";
 import { usePersona } from "./persona/usePersona.jsx";
 import { UIProvider, useUIConfig } from "./adaptation/UIContext.jsx";
 import { AdaptationDebugger } from "./components/AdaptationDebugger.jsx";
+import HelpTooltip from "./components/HelpTooltip.jsx";
 import Navbar from "./components/Navbar.jsx";
 import MetricsCollector from "./utils/metricsCollectorSimplified.jsx";
 import { setupExperimentControl } from "./utils/experimentControl.jsx";
@@ -165,20 +167,24 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <UIProvider persona={persona} metrics={metrics}>
-        {/* Header with persona info */}
-        <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
-          <div style={{ fontSize: "12px", color: "#666" }}>
-            Current Persona: <strong>{persona?.type || "loading..."}</strong> |
-            Status: {persona?.stable ? "Stable" : "Learning..."}
-          </div>
-        </header>
+      <HelpTooltipProvider>
+        <UIProvider persona={persona} metrics={metrics}>
+          {/* Header with persona info */}
+          <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
+            <div style={{ fontSize: "12px", color: "#666" }}>
+              Current Persona: <strong>{persona?.type || "loading..."}</strong> |
+              Status: {persona?.stable ? "Stable" : "Learning..."}
+            </div>
+          </header>
 
-        {/* Navigation Bar */}
-        <Navbar />
+          {/* Navigation Bar */}
+          <Navbar />
 
-        {/* Adaptation Debugger */}
-        <AdaptationDebugger />
+          {/* Help Tooltip System - Activated by action 9 */}
+          <HelpTooltip />
+
+          {/* Adaptation Debugger */}
+          <AdaptationDebugger />
 
       <main>
         <Routes>
@@ -208,8 +214,9 @@ function AppContent() {
           <Route path="/finish" element={<FinishRecoveryPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
-      </main>
-      </UIProvider>
+        </main>
+        </UIProvider>
+      </HelpTooltipProvider>
     </BrowserRouter>
   );
 }
