@@ -37,7 +37,7 @@ function AppHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-white ${ui.shadow} border-b border-gray-200`}
+      className={`sticky top-0 z-50 bg-white/80 backdrop-blur-md ${ui.shadow} border-b border-primary-100`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center mb-4">
@@ -56,42 +56,42 @@ function AppHeader() {
           <AdaptiveLink
             as={Link}
             to="/"
-            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors duration-200 rounded-lg"
           >
             Home
           </AdaptiveLink>
           <AdaptiveLink
             as={Link}
             to="/login"
-            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors duration-200 rounded-lg"
           >
             Login
           </AdaptiveLink>
           <AdaptiveLink
             as={Link}
             to="/register"
-            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors duration-200 rounded-lg"
           >
             Register
           </AdaptiveLink>
           <AdaptiveLink
             as={Link}
             to="/transaction"
-            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors duration-200 rounded-lg"
           >
             Transaction
           </AdaptiveLink>
           <AdaptiveLink
             as={Link}
             to="/recovery"
-            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="adaptive-element px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors duration-200 rounded-lg"
           >
             Recovery
           </AdaptiveLink>
           <AdaptiveLink
             as={Link}
             to="/dashboard"
-            className="adaptive-element px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+            className="adaptive-element px-4 py-2 text-primary-600 bg-primary-50 hover:bg-primary-100 transition-colors duration-200 rounded-lg"
           >
             Dashboard
           </AdaptiveLink>
@@ -102,25 +102,25 @@ function AppHeader() {
         <div
           className={`mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${ui.spacing} text-xs`}
         >
-          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+          <div className={`bg-primary-50/50 border border-primary-100 ${ui.cardPadding} ${ui.radius}`}>
             <AdaptiveParagraph className="text-gray-600">
               Duration
             </AdaptiveParagraph>
             <p className={`${ui.font}`}>{fmt(metrics.s_session_duration)}s</p>
           </div>
-          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+          <div className={`bg-primary-50/50 border border-primary-100 ${ui.cardPadding} ${ui.radius}`}>
             <AdaptiveParagraph className="text-gray-600">
               Distance
             </AdaptiveParagraph>
             <p className={`${ui.font}`}>{fmt(metrics.s_total_distance)}</p>
           </div>
-          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+          <div className={`bg-primary-50/50 border border-primary-100 ${ui.cardPadding} ${ui.radius}`}>
             <AdaptiveParagraph className="text-gray-600">
               Clicks
             </AdaptiveParagraph>
             <p className={`${ui.font}`}>{metrics.s_num_clicks || 0}</p>
           </div>
-          <div className={`bg-gray-50 ${ui.cardPadding} ${ui.radius}`}>
+          <div className={`bg-primary-50/50 border border-primary-100 ${ui.cardPadding} ${ui.radius}`}>
             <AdaptiveParagraph className="text-gray-600">
               Idle Time
             </AdaptiveParagraph>
@@ -198,7 +198,7 @@ export default function App() {
       <UIProvider persona={persona}>
         <AppHeader />
         <AdaptationDebugger />
-        <main className="min-h-screen bg-gray-50">
+        <main className="min-h-screen bg-transparent">
           {/* === ROUTES === */}
           <Routes>
             <Route path="/" element={<HomePage />} />

@@ -88,7 +88,7 @@ export default function Login() {
               <AdaptiveLink
                 as={Link}
                 to="/register"
-                className="text-blue-600 hover:text-blue-700"
+                className="text-primary-600 hover:text-primary-700"
               >
                 Register here
               </AdaptiveLink>
@@ -130,7 +130,7 @@ export default function Login() {
               <AdaptiveLink
                 as={Link}
                 to="/recovery"
-                className="text-blue-600 hover:text-blue-700"
+                className="text-primary-600 hover:text-primary-700"
               >
                 Forgot password?
               </AdaptiveLink>
@@ -141,7 +141,7 @@ export default function Login() {
         {stepId === "authenticating" && (
           <div className="card-base text-center py-12">
             <div className="inline-block">
-              <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+              <div className="w-12 h-12 border-4 border-gray-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
             </div>
             <AdaptiveParagraph className="text-gray-600">
               Authenticating...

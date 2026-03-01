@@ -5,7 +5,7 @@ export default function AdaptiveButton({ children, className = "", ...props }) {
 
   return (
     <button
-      className={`btn-base bg-blue-600 text-white hover:bg-blue-700 ${ui.button} ${ui.text} ${ui.font} ${className}`}
+      className={`btn-base bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed ${ui.button} ${ui.text} ${ui.font} ${className}`}
       {...props}
     >
       {children}

@@ -54,7 +54,7 @@ export default function Dashboard() {
             onClick={() => setActiveTab(tab)}
             className={`adaptive-element px-6 py-3 capitalize border-b-2 transition-colors ${
               activeTab === tab
-                ? "text-blue-600 border-blue-600"
+                ? "text-primary-600 border-primary-600"
                 : "text-gray-600 border-transparent hover:text-gray-900"
             }`}
           >
@@ -121,7 +121,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Mouse Velocity (Mean)
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(metrics.s_vel_mean)} px/ms
               </span>
             </div>
@@ -129,7 +129,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Mouse Velocity (Max)
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(metrics.s_vel_max)} px/ms
               </span>
             </div>
@@ -137,7 +137,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Total Distance Traveled
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(metrics.s_total_distance)} px
               </span>
             </div>
@@ -145,7 +145,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Total Actions
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {metrics.s_num_actions || 0}
               </span>
             </div>
@@ -153,13 +153,13 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Total Clicks
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {metrics.s_num_clicks || 0}
               </span>
             </div>
             <div className="flex justify-between items-center pb-4">
               <AdaptiveLabel className="text-gray-700">Misclicks</AdaptiveLabel>
-              <span className="text-lg font-semibold text-red-600">
+              <span className="text-lg font-semibold text-danger">
                 {metrics.s_num_misclicks || 0}
               </span>
             </div>
@@ -178,13 +178,13 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Session Duration
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(metrics.s_session_duration)}s
               </span>
             </div>
             <div className="flex justify-between items-center pb-4 border-b border-gray-200">
               <AdaptiveLabel className="text-gray-700">Idle Time</AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(idleTime)}s
               </span>
             </div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Active Time
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-green-600">
+              <span className="text-lg font-semibold text-success">
                 {fmt(metrics.s_session_duration - idleTime)}s
               </span>
             </div>
@@ -200,7 +200,7 @@ export default function Dashboard() {
               <AdaptiveLabel className="text-gray-700">
                 Page Scroll Depth
               </AdaptiveLabel>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-lg font-semibold text-primary-600">
                 {fmt(scrollDepth * 100, 1)}%
               </span>
             </div>
@@ -218,7 +218,7 @@ export default function Dashboard() {
               alert("Session flow completed and saved!");
             }
           }}
-          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          className="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
         >
           Complete Session
         </AdaptiveButton>
@@ -226,14 +226,14 @@ export default function Dashboard() {
         <AdaptiveLink
           as={Link}
           to="/login"
-          className="adaptive-element inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm hover:shadow-md"
+          className="adaptive-element inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md"
         >
           Go to Login
         </AdaptiveLink>
         <AdaptiveLink
           as={Link}
           to="/transaction"
-          className="adaptive-element inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm hover:shadow-md"
+          className="adaptive-element inline-block px-6 py-3 bg-success text-white rounded-lg hover:bg-success-dark shadow-sm hover:shadow-md"
         >
           New Transaction
         </AdaptiveLink>

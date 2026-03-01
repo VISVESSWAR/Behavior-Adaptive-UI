@@ -91,7 +91,7 @@ export default function Register() {
               <AdaptiveLink
                 as={Link}
                 to="/login"
-                className="text-blue-600 hover:text-blue-700"
+                className="text-primary-600 hover:text-primary-700"
               >
                 Sign in
               </AdaptiveLink>
@@ -146,7 +146,7 @@ export default function Register() {
         {stepId === "registering" && (
           <div className="card-base text-center py-12">
             <div className="inline-block">
-              <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+              <div className="w-12 h-12 border-4 border-gray-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
             </div>
             <AdaptiveParagraph className="text-gray-600">
               Creating your account...

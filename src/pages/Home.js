@@ -27,7 +27,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100">
       {/* === HERO SECTION === */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="text-center mb-16">
@@ -43,14 +43,14 @@ export default function HomePage() {
             <AdaptiveLink
               as={Link}
               to="/login"
-              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="adaptive-element inline-block px-8 py-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               Get Started
             </AdaptiveLink>
             <AdaptiveLink
               as={Link}
               to="/dashboard"
-              className="adaptive-element inline-block px-8 py-4 bg-white text-blue-600 rounded-lg border-2 border-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="adaptive-element inline-block px-8 py-4 bg-white text-primary-600 rounded-lg border-2 border-primary-600 hover:bg-primary-50 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               View Dashboard
             </AdaptiveLink>
@@ -190,7 +190,7 @@ export default function HomePage() {
               },
             ].map((item, idx) => (
               <div key={idx} className="card-base">
-                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">
+                <div className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">
                   {item.step}
                 </div>
                 <AdaptiveHeading level={3} className="text-gray-900 mb-2">
@@ -218,21 +218,21 @@ export default function HomePage() {
             <AdaptiveLink
               as={Link}
               to="/login"
-              className="adaptive-element inline-block px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-lg hover:shadow-xl"
             >
               Sign In
             </AdaptiveLink>
             <AdaptiveLink
               as={Link}
               to="/register"
-              className="adaptive-element inline-block px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-success text-white rounded-lg hover:bg-success-dark shadow-lg hover:shadow-xl"
             >
               Create Account
             </AdaptiveLink>
             <AdaptiveLink
               as={Link}
               to="/dashboard"
-              className="adaptive-element inline-block px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-lg hover:shadow-xl"
+              className="adaptive-element inline-block px-8 py-4 bg-primary-500 text-white rounded-lg hover:bg-primary-600 shadow-lg hover:shadow-xl"
             >
               View Analytics
             </AdaptiveLink>
@@ -241,7 +241,7 @@ export default function HomePage() {
       </section>
 
       {/* === FOOTER === */}
-      <footer className="bg-gray-900 text-gray-300 py-8">
+      <footer className="bg-primary-900 text-primary-200 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p>
             © 2026 Adaptive UI System. Building smarter user experiences through

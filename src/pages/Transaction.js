@@ -80,12 +80,12 @@ export default function Transaction() {
               <button
                 key={service.id}
                 onClick={() => handleServiceSelect(service)}
-                className="card-base text-center hover:border-blue-500 hover:border-2 transform hover:scale-105"
+                className="card-base text-center hover:border-primary-500 hover:border-2 transform hover:scale-105"
               >
                 <AdaptiveHeading level={3} className="text-gray-900 mb-2">
                   {service.name}
                 </AdaptiveHeading>
-                <p className="text-blue-600 font-bold text-lg">
+                <p className="text-primary-600 font-bold text-lg">
                   {service.price}
                 </p>
               </button>
@@ -126,7 +126,7 @@ export default function Transaction() {
               </div>
               <div className="flex justify-between items-center">
                 <AdaptiveLabel className="text-gray-600">Status</AdaptiveLabel>
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                <span className="px-3 py-1 bg-warning-light text-warning-dark rounded-full text-sm font-medium">
                   Pending
                 </span>
               </div>
@@ -153,7 +153,7 @@ export default function Transaction() {
               </AdaptiveButton>
               <AdaptiveButton
                 onClick={handlePayment}
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="flex-1 bg-success hover:bg-success-dark"
               >
                 Confirm Payment
               </AdaptiveButton>
@@ -165,7 +165,7 @@ export default function Transaction() {
       {stepId === "processing" && (
         <div className="card-base max-w-md mx-auto text-center py-12">
           <div className="inline-block">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
+            <div className="w-16 h-16 border-4 border-gray-200 border-t-success rounded-full animate-spin mb-4"></div>
           </div>
           <AdaptiveHeading level={3} className="text-gray-900 mb-2">
             Processing Payment

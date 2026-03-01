@@ -130,7 +130,7 @@ export default function Recovery() {
             <AdaptiveLink
               as={Link}
               to="/login"
-              className="text-blue-600 hover:text-blue-700"
+              className="text-primary-600 hover:text-primary-700"
             >
               Back to Login
             </AdaptiveLink>
@@ -182,7 +182,7 @@ export default function Recovery() {
               <AdaptiveParagraph className="text-gray-600 mb-4">
                 Approve the recovery request with a tap
               </AdaptiveParagraph>
-              <AdaptiveButton className="w-full bg-green-600 hover:bg-green-700">
+              <AdaptiveButton className="w-full bg-success hover:bg-success-dark">
                 Use Tap Yes
               </AdaptiveButton>
             </div>
@@ -215,7 +215,7 @@ export default function Recovery() {
           </div>
           <AdaptiveButton
             onClick={simulateQRScan}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-primary-600 hover:bg-primary-700"
           >
             Simulate QR Scan
           </AdaptiveButton>
@@ -232,7 +232,7 @@ export default function Recovery() {
       {stepId === "qr_verified" && (
         <div className="card-base max-w-md mx-auto text-center py-12">
           <div className="inline-block">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+            <div className="w-16 h-16 border-4 border-gray-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
           </div>
           <p className="text-gray-600 font-medium">Verifying QR code...</p>
         </div>
@@ -252,8 +252,8 @@ export default function Recovery() {
             Tap "Yes" on your phone or other device to approve
           </p>
 
-          <div className="bg-blue-50 p-4 rounded-lg mb-6">
-            <p className="text-sm text-blue-800">
+          <div className="bg-primary-50 p-4 rounded-lg mb-6">
+            <p className="text-sm text-primary-800">
               💡 In a real scenario, you would approve this on your mobile
               device. For now, click the button below to simulate approval.
             </p>
@@ -261,7 +261,7 @@ export default function Recovery() {
 
           <AdaptiveButton
             onClick={simulateTapYes}
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full bg-success hover:bg-success-dark"
           >
             Simulate "Tap Yes" Approval
           </AdaptiveButton>
@@ -319,7 +319,7 @@ export default function Recovery() {
 
           <AdaptiveButton
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full bg-success hover:bg-success-dark"
           >
             Reset Password
           </AdaptiveButton>
