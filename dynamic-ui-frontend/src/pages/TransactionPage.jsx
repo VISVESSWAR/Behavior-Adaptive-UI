@@ -51,14 +51,7 @@ export default function TransactionPage() {
     task.startTask("transaction_task", 60000); // 60 second limit
 
     // Get pathType from metrics collector if available, otherwise assign random one
-    let assignedPathType = null;
-    if (window.__metricsCollector?.pathType) {
-      assignedPathType = window.__metricsCollector.pathType;
-    } else {
-      assignedPathType = TRANSACTION_PATHS[Math.floor(Math.random() * TRANSACTION_PATHS.length)];
-    }
-    
-    setPathType(assignedPathType);
+    setPathType(null); 
     console.log("TRANSACTION PATH:", assignedPathType);
 
     // Fetch peers from API
@@ -367,6 +360,37 @@ export default function TransactionPage() {
     <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Create Transaction</AdaptiveHeading>
+        {!pathType && (
+  <div style={{ marginBottom: "15px" }}>
+    <AdaptiveParagraph style={{ marginBottom: "8px", fontWeight: "bold" }}>
+      Select Transaction Mode
+    </AdaptiveParagraph>
+
+    {TRANSACTION_PATHS.map((path) => (
+      <AdaptiveButton
+        key={path}
+        onClick={() => {
+          setPathType(path);
+          setCurrentStep(0);
+
+          logEvent({
+            type: "transaction_mode_selected",
+            flowId: FLOW_ID,
+            stepId: STEP_ID,
+            selectedPath: path,
+          });
+        }}
+        style={{
+          marginBottom: "8px",
+          width: "100%",
+        }}
+      >
+        {path.replace(/_/g, " ").toUpperCase()}
+      </AdaptiveButton>
+    ))}
+  </div>
+)}
+        
         
         {/* Path Type Badge */}
         {pathType && (

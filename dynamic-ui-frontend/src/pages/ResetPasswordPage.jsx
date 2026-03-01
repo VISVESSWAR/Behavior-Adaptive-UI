@@ -3,7 +3,7 @@ import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
-import AdaptiveInput from "../components/AdaptiveInput.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
 import "../styles.css";
 
@@ -43,8 +43,7 @@ export default function ResetPasswordPage() {
           Account: <strong>{email}</strong>
         </AdaptiveParagraph>
 
-        <AdaptiveInput
-          type="password"
+        <PasswordInput
           placeholder="New Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -57,8 +56,7 @@ export default function ResetPasswordPage() {
           }
         />
 
-        <AdaptiveInput
-          type="password"
+        <PasswordInput
           placeholder="Confirm Password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

@@ -1,4 +1,5 @@
 // Simplified Metrics Collector: Collect snapshots every 10s (metrics+persona+action), store chronologically, build CSV from consecutive snapshots, compute rewards post-hoc from (s_t, a_t, s_t+1)
+// ALIGNED WITH taskReward.jsx: Task rewards use +0.6 (complete), -0.4 (timeout), -0.02 × pathLength, clipped to [-1, 1]
 
 import { TransitionBuilder } from "./snapshotSchema.jsx";
 import IndexedDBManager from "./indexedDBManager.jsx";
@@ -246,7 +247,8 @@ export class MetricsCollector {
     this.currentTaskData = taskData;
   }
 
-  // Calculate task reward: +0.5 (complete), -0.3 (timeout), -0.01 × pathLength
+  // Calculate task reward: +0.6 (complete), -0.4 (timeout), -0.02 × pathLength; clipped to [-1, 1]
+  // ALIGNED WITH: taskReward.jsx for consistency
   calculateTaskReward(taskData) {
     if (!taskData) return 0;
 
@@ -254,19 +256,20 @@ export class MetricsCollector {
 
     // Bonus for completion
     if (taskData.completed) {
-      reward += 0.5;
+      reward += 0.6;
     }
 
     // Penalty for timeout
     if (taskData.failed) {
-      reward -= 0.3;
+      reward -= 0.4;
     }
 
     // Path length penalty
     const pathLength = taskData.pathLength || 0;
-    reward -= 0.01 * pathLength;
+    reward -= 0.02 * pathLength;
 
-    return reward;
+    // Clip to [-1.0, 1.0] to match taskReward.jsx normalization
+    return Math.max(-1.0, Math.min(1.0, reward));
   }
 
   // Check if it's time to collect a snapshot

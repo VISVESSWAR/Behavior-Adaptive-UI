@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
 import { useTask } from "../task/TaskContext.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
 import "../styles.css";
@@ -87,8 +88,7 @@ export default function LoginPage() {
           }}
         />
 
-        <AdaptiveInput
-          type="password"
+        <PasswordInput
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

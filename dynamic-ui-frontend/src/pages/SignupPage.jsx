@@ -3,6 +3,7 @@ import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading } from "../components/AdaptiveText.jsx";
 import "../styles.css";
@@ -91,8 +92,7 @@ export default function SignupPage() {
           }
         />
 
-        <AdaptiveInput
-          type="password"
+        <PasswordInput
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
