@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
@@ -16,21 +17,22 @@ export default function ResetPasswordPage() {
 
   async function resetPassword() {
     if (password !== confirm) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     try {
+      const loadingToast = toast.loading("Resetting password...");
       await post("/recover/reset-password", {
         email,
         newPassword: password,
       });
-
-      alert("Password reset successful");
+      toast.dismiss(loadingToast);
+      toast.success("Password reset successful");
       localStorage.clear();
       navigate("/");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 

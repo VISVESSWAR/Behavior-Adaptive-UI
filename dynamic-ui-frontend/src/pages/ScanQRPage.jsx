@@ -1,5 +1,6 @@
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import "../styles.css";
 
@@ -23,7 +24,7 @@ export default function ScanQRPage() {
 
         // Validate QR ownership
         if (data.email !== email) {
-          alert("This QR is not for this account");
+          toast.error("This QR is not for this account");
           return;
         }
 
@@ -43,7 +44,7 @@ export default function ScanQRPage() {
         });
 
       } catch {
-        alert("Invalid QR code");
+        toast.error("Invalid QR code");
       }
     });
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
@@ -14,12 +15,17 @@ export default function RecoveryPage() {
   const [step, setStep] = useState("email"); // email | method
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [methods, setMethods] = useState({
+    email: false,
+    peer: false,
+    device: false
+  });
 
   const navigate = useNavigate();
 
   async function validateEmail() {
     if (!email.trim()) {
-      alert("Please enter your email address");
+      toast.error("Please enter your email address");
       return;
     }
 
@@ -34,12 +40,24 @@ export default function RecoveryPage() {
         timestamp: new Date().toISOString(),
       });
 
-      // Check email and get recovery mode options
-      const decision = await post("/recover/decide", { email });
+      // Fetch available recovery methods from secure endpoint
+      const optionsResponse = await post("/recover/options", { identifier: email });
+      
+      // Store available methods
+      setMethods(optionsResponse.methods);
 
-      // Store email globally for next steps
+      logEvent({
+        type: "recovery_methods_fetched",
+        flowId: FLOW_ID,
+        stepId: "email",
+        email,
+        availableMethods: optionsResponse.methods,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Store email for next steps
       localStorage.setItem("email", email);
-      localStorage.setItem("recovery_mode", decision.recovery_mode);
+      localStorage.setItem("recoveryMethods", JSON.stringify(optionsResponse.methods));
 
       // Move to method selection
       setStep("method");
@@ -50,7 +68,7 @@ export default function RecoveryPage() {
         stepId: "email",
         error: err.message,
       });
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -91,7 +109,7 @@ export default function RecoveryPage() {
         method: method,
         error: err.message,
       });
-      alert(err.message);
+      toast.error(err.message);
       setSelectedMethod(null);
     } finally {
       setLoading(false);
@@ -155,51 +173,99 @@ export default function RecoveryPage() {
               <strong>Choose your recovery method:</strong>
             </AdaptiveLabel>
 
+            {/* Show warning if no methods available */}
+            {!methods.email && !methods.peer && !methods.device && (
+              <div
+                style={{
+                  padding: "15px",
+                  marginBottom: "20px",
+                  backgroundColor: "#fff3cd",
+                  border: "1px solid #ffc107",
+                  borderRadius: "4px",
+                  color: "#856404",
+                  fontSize: "14px",
+                }}
+              >
+                <strong>⚠️ No Recovery Methods Available</strong>
+                <div style={{ marginTop: "8px", fontSize: "13px" }}>
+                  Unfortunately, no recovery methods have been configured for this account. 
+                  Please contact support for assistance.
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
-              <AdaptiveButton
-                onClick={() => handleMethodSelection("email")}
-                disabled={loading}
-                style={{
-                  padding: "15px",
-                  textAlign: "left",
-                  opacity: selectedMethod === "email" ? 0.7 : 1,
-                }}
-              >
-                📧 Recover via Email OTP
-                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
-                  We'll send a code to your email
-                </div>
-              </AdaptiveButton>
+              {/* Email OTP Recovery - Only show if enabled */}
+              {methods.email && (
+                <AdaptiveButton
+                  onClick={() => handleMethodSelection("email")}
+                  disabled={loading}
+                  style={{
+                    padding: "15px",
+                    textAlign: "left",
+                    opacity: selectedMethod === "email" ? 0.7 : 1,
+                  }}
+                >
+                  📧 Recover via Email OTP
+                  <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                    We'll send a code to your email
+                  </div>
+                </AdaptiveButton>
+              )}
 
-              <AdaptiveButton
-                onClick={() => handleMethodSelection("qr")}
-                disabled={loading}
-                style={{
-                  padding: "15px",
-                  textAlign: "left",
-                  opacity: selectedMethod === "qr" ? 0.7 : 1,
-                }}
-              >
-                📱 Recover via QR Scan
-                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
-                  Scan codes from your recovery peers
-                </div>
-              </AdaptiveButton>
+              {/* QR Scan Recovery - Only show if peer recovery enabled */}
+              {methods.peer && (
+                <AdaptiveButton
+                  onClick={() => handleMethodSelection("qr")}
+                  disabled={loading}
+                  style={{
+                    padding: "15px",
+                    textAlign: "left",
+                    opacity: selectedMethod === "qr" ? 0.7 : 1,
+                  }}
+                >
+                  📱 Recover via QR Scan
+                  <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                    Scan codes from your recovery peers
+                  </div>
+                </AdaptiveButton>
+              )}
 
-              <AdaptiveButton
-                onClick={() => handleMethodSelection("tap")}
-                disabled={loading}
-                style={{
-                  padding: "15px",
-                  textAlign: "left",
-                  opacity: selectedMethod === "tap" ? 0.7 : 1,
-                }}
-              >
-                👥 Peer Approval (Tap Yes)
-                <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
-                  Your peers approve your recovery
-                </div>
-              </AdaptiveButton>
+              {/* Peer Approval (Tap) - Only show if peer recovery enabled */}
+              {methods.peer && (
+                <AdaptiveButton
+                  onClick={() => handleMethodSelection("tap")}
+                  disabled={loading}
+                  style={{
+                    padding: "15px",
+                    textAlign: "left",
+                    opacity: selectedMethod === "tap" ? 0.7 : 1,
+                  }}
+                >
+                  👥 Peer Approval (Tap Yes)
+                  <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                    Your peers approve your recovery
+                  </div>
+                </AdaptiveButton>
+              )}
+
+              {/* Device Recovery - Reserved for future use */}
+              {methods.device && (
+                <AdaptiveButton
+                  onClick={() => handleMethodSelection("device")}
+                  disabled={loading}
+                  style={{
+                    padding: "15px",
+                    textAlign: "left",
+                    opacity: selectedMethod === "device" ? 0.7 : 1,
+                  }}
+                >
+                  🔐 Recover via Trusted Device
+                  <div style={{ fontSize: "12px", marginTop: "5px", opacity: 0.8 }}>
+                    Use a previously trusted device
+                  </div>
+                </AdaptiveButton>
+              )}
             </div>
 
             <AdaptiveButton

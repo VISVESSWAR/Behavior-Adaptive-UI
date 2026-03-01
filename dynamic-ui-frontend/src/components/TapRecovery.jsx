@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveButton from "./AdaptiveButton.jsx";
 import { AdaptiveParagraph } from "./AdaptiveText.jsx";
@@ -30,7 +31,7 @@ export default function TapRecovery() {
         timestamp: new Date().toISOString(),
       });
 
-      alert("Recovery request sent to peers");
+      toast.success("Recovery request sent to peers");
     } catch (err) {
       logEvent({
         type: "tap_recovery_error",
@@ -38,7 +39,7 @@ export default function TapRecovery() {
         stepId: "tap_initiate",
         error: err.message,
       });
-      alert("Error: " + err.message);
+      toast.error(err.message);
     }
   }
 

@@ -9,8 +9,63 @@ import { sendOtpEmail } from "../utils/mailer.js";
 export const router = express.Router();
 
 /* =====================================================
-   COMMON — DECIDE RECOVERY METHOD
+   SECURE - GET RECOVERY OPTIONS (no auth required)
+   Password-Protected: Does NOT reveal user existence
    ===================================================== */
+
+router.post("/options", async (req, res) => {
+  try {
+    const { identifier } = req.body;
+
+    if (!identifier || typeof identifier !== "string") {
+      return res.status(400).json({ error: "Invalid identifier" });
+    }
+
+    const trimmedId = identifier.trim();
+
+    // Query user by email (identifier can be email or username)
+    const user = await pool.query(
+      "SELECT recovery_mode, commitment, threshold FROM users WHERE email=$1",
+      [trimmedId]
+    );
+
+    // ⚠️ CRITICAL: Always return same response structure
+    // If user exists: return true for their configured methods
+    // If user doesn't exist: return all false (security: don't leak user existence)
+    const methods = {
+      email: false,
+      peer: false,
+      device: false
+    };
+
+    if (user.rowCount > 0) {
+      const userData = user.rows[0];
+
+      // Email recovery always available (optional)
+      methods.email = true;
+
+      // Peer recovery available only if peer mode with complete setup
+      if (
+        userData.recovery_mode === "peer" &&
+        userData.commitment &&
+        userData.threshold
+      ) {
+        methods.peer = true;
+      }
+
+      // Device recovery could be added in future
+      // methods.device = userData.device_enabled ? true : false;
+    }
+
+    // Always return 200 OK with same response structure
+    // This prevents user enumeration attacks
+    return res.json({ methods });
+  } catch (err) {
+    console.error("[/recover/options] Error:", err);
+    // Generic error response (don't leak database details)
+    return res.status(500).json({ error: "An error occurred" });
+  }
+});
 
 router.post("/decide", async (req, res) => {
   const { email } = req.body;

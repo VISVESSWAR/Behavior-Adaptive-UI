@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useMetricsCollector } from "../context/MetricsContext.jsx";
 import IndexedDBManager from "../utils/indexedDBManager.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
@@ -58,7 +59,7 @@ export default function DashboardPage() {
       const csvData = await dbManager.exportAllAsCSV();
 
       if (!csvData) {
-        alert("No transitions to export");
+        toast.error("No transitions to export");
         return;
       }
 

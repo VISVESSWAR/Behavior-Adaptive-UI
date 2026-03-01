@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import { logEvent } from "../logging/eventLogger.jsx";
@@ -64,7 +65,7 @@ export default function LoginPage() {
         stepId: STEP_ID,
         error: err.message,
       });
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 

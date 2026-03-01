@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
@@ -34,12 +35,15 @@ export default function OtpRecoverPage() {
      =============================== */
   async function verifyOtp() {
     try {
+      const loadingToast = toast.loading("Verifying OTP...");
       await post("/recover/otp/verify", { email, otp });
+      toast.dismiss(loadingToast);
+      toast.success("OTP verified successfully");
 
       // ✅ OTP VERIFIED → GO TO COMMON RESET PAGE
       navigate("/reset-password");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
@@ -48,12 +52,14 @@ export default function OtpRecoverPage() {
      =============================== */
   async function resendOtp() {
     try {
+      const loadingToast = toast.loading("Sending OTP...");
       await post("/recover/otp/start", { email });
+      toast.dismiss(loadingToast);
       setTimer(60);
       setCanResend(false);
-      alert("OTP resent to email");
+      toast.success("OTP resent to email");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   }
 
