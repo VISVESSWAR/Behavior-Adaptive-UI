@@ -174,13 +174,7 @@ function AppContent() {
           {/* Toast notification system */}
           <Toaster position="top-right" />
 
-          {/* Header with persona info */}
-          <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
-            <div style={{ fontSize: "12px", color: "#666" }}>
-              Current Persona: <strong>{persona?.type || "loading..."}</strong> |
-              Status: {persona?.stable ? "Stable" : "Learning..."}
-            </div>
-          </header>
+          
 
           {/* Navigation Bar */}
           <Navbar />

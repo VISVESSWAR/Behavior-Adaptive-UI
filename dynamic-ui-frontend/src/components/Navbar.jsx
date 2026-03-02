@@ -1,135 +1,132 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import AdaptiveButton from "./AdaptiveButton.jsx";
 
 export default function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Check initial auth state
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
-  }, []);
+  /* ---------- AUTH STATE ---------- */
 
-  // Listen for auth changes (both storage and custom events)
   useEffect(() => {
-    // Handle storage changes from other tabs
-    const handleStorageChange = () => {
+    const checkAuth = () => {
       const token = localStorage.getItem("token");
       setIsAuthenticated(!!token);
     };
 
-    // Handle custom auth event from same tab
-    const handleAuthChange = () => {
-      const token = localStorage.getItem("token");
-      setIsAuthenticated(!!token);
-    };
+    checkAuth();
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("auth-change", handleAuthChange);
+    window.addEventListener("storage", checkAuth);
+    window.addEventListener("auth-change", checkAuth);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("auth-change", handleAuthChange);
+      window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("auth-change", checkAuth);
     };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setIsAuthenticated(false);
+    window.dispatchEvent(new Event("auth-change"));
     navigate("/");
   };
 
+  /* ---------- NAV ITEMS ---------- */
+
+  let navigationItems = [];
+
+  if (!isAuthenticated) {
+    navigationItems = [
+      { label: "Login", path: "/" },
+      { label: "Recovery", path: "/recover" },
+      { label: "Register", path: "/signup" },
+    ];
+  } else {
+    navigationItems = [
+      { label: "Home", path: "/home" },
+      { label: "Dashboard", path: "/dashboard" },
+      { label: "Transaction", path: "/transaction" },
+      { label: "Metrics", path: "/metrics" },
+      { label: "Recovery", path: "/recover" },
+      { label: "Logout", action: handleLogout },
+    ];
+  }
+
+  // Alphabetical sort
+  // navigationItems.sort((a, b) => a.label.localeCompare(b.label));
+
+  const getActiveStyle = (path) =>
+    location.pathname === path ? "bg-blue-600 text-white" : "bg-transparent";
+
+  /* ---------- RENDER ---------- */
+
   return (
-    <nav
-      style={{
-        padding: "15px 20px",
-        backgroundColor: "#f5f5f5",
-        borderBottom: "1px solid #ddd",
-        display: "flex",
-        gap: "8px",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        flexWrap: "wrap",
-      }}
-    >
-      {!isAuthenticated && (
-        <>
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <AdaptiveButton style={{ padding: "8px 16px", whiteSpace: "nowrap" }}>Login</AdaptiveButton>
-          </Link>
+    <nav className="w-full border-b bg-gray-100 px-6 py-3">
+      <div className="flex items-center justify-start">
+        {/* Hamburger (md and below) */}
+        <div
+          className="md:hidden text-2xl cursor-pointer"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          ☰
+        </div>
 
-          <Link to="/signup" style={{ textDecoration: "none" }}>
-            <AdaptiveButton style={{ padding: "8px 16px", whiteSpace: "nowrap" }}>
-              Register
-            </AdaptiveButton>
-          </Link>
-        </>
-      )}
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-3">
+          {navigationItems.map((item) =>
+            item.action ? (
+              <AdaptiveButton
+                key={item.label}
+                onClick={item.action}
+                className="px-4 py-2 bg-blue-700 hover:bg-blue-600 hover:text-white border border-gray-300 transition"
+              >
+                {item.label}
+              </AdaptiveButton>
+            ) : (
+              <Link key={item.label} to={item.path}>
+                <AdaptiveButton
+                  className={`px-4 py-2 bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+                >
+                  {item.label}
+                </AdaptiveButton>
+              </Link>
+            ),
+          )}
+        </div>
+      </div>
 
-      <Link to="/recover" style={{ textDecoration: "none" }}>
-        <AdaptiveButton style={{ padding: "8px 16px", whiteSpace: "nowrap" }}>
-          Recovery
-        </AdaptiveButton>
-      </Link>
-
-      {isAuthenticated && (
-        <>
-          <Link to="/transaction" style={{ textDecoration: "none" }}>
-            <AdaptiveButton style={{ padding: "8px 16px", whiteSpace: "nowrap" }}>
-              Transaction
-            </AdaptiveButton>
-          </Link>
-
-          <Link to="/home" style={{ textDecoration: "none" }}>
-            <AdaptiveButton style={{ padding: "8px 16px", whiteSpace: "nowrap" }}>Home</AdaptiveButton>
-          </Link>
-
-          <Link to="/dashboard" style={{ textDecoration: "none" }}>
-            <AdaptiveButton
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#0066cc",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Dashboard
-            </AdaptiveButton>
-          </Link>
-
-          <Link to="/metrics" style={{ textDecoration: "none" }}>
-            <AdaptiveButton
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#ff9800",
-                whiteSpace: "nowrap",
-              }}
-            >
-              📊 Metrics
-            </AdaptiveButton>
-          </Link>
-        </>
-      )}
-
-      {isAuthenticated && (
-        <div className="fixed top-3 right-4 z-50">
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "6px 12px",
-              fontSize: "14px",
-              backgroundColor: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontWeight: "500",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Logout
-          </button>
+      {/* Mobile Dropdown */}
+      {menuOpen && (
+        <div className="flex flex-col gap-2 mt-4 md:hidden">
+          {navigationItems.map((item) =>
+            item.action ? (
+              <AdaptiveButton
+                key={item.label}
+                onClick={() => {
+                  item.action();
+                  setMenuOpen(false);
+                }}
+                className={`px-4 py-2 w-full bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+              >
+                {item.label}
+              </AdaptiveButton>
+            ) : (
+              <Link
+                key={item.label}
+                to={item.path}
+                onClick={() => setMenuOpen(false)}
+              >
+                <AdaptiveButton
+                  className={`px-4 py-2 w-full bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+                >
+                  {item.label}
+                </AdaptiveButton>
+              </Link>
+            ),
+          )}
         </div>
       )}
     </nav>

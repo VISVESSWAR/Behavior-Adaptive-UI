@@ -11,20 +11,32 @@ const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many
 // "model"  : Use model action directly (exploitation only)
 // "random" : Use random valid actions (exploration only)
 // "guided" : Use probabilistic mix (25% model, 55% random, 20% anti-model)
-let EXPERIMENT_MODE = "guided"; // Change to "model" or "random" for different policies
+const STORAGE_KEY = "experiment_mode";
 
+let EXPERIMENT_MODE =
+  localStorage.getItem(STORAGE_KEY) || "guided";
 export function getExperimentMode() {
   return EXPERIMENT_MODE;
 }
 
 export function setExperimentMode(mode) {
   const validModes = ["model", "guided", "random"];
+
   if (!validModes.includes(mode)) {
-    console.error(`[ExperimentControl] Invalid mode: "${mode}". Must be one of: ${validModes.join(", ")}`);
+    console.error(
+      `[ExperimentControl] Invalid mode: "${mode}"`
+    );
     return false;
   }
+
   EXPERIMENT_MODE = mode;
-  console.log(`[ExperimentControl] Experiment mode set to: "${mode}"`);
+
+  localStorage.setItem(STORAGE_KEY, mode);
+
+  console.log(
+    `[ExperimentControl] Experiment mode set to: "${mode}"`
+  );
+
   return true;
 }
 
