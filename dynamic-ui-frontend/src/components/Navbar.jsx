@@ -97,6 +97,18 @@ export default function Navbar() {
               Dashboard
             </AdaptiveButton>
           </Link>
+
+          <Link to="/metrics" style={{ textDecoration: "none" }}>
+            <AdaptiveButton
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#ff9800",
+                whiteSpace: "nowrap",
+              }}
+            >
+              📊 Metrics
+            </AdaptiveButton>
+          </Link>
         </>
       )}
 

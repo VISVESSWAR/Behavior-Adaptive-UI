@@ -75,8 +75,6 @@ export function UIProvider({ children, persona = null }) {
   // 🔹 Apply adaptation ONLY when snapshot-level action changes
   // Use FINAL action (after exploration + cooldown), not model action
   useEffect(() => {
-    if (!personaStable) return;
-
     // Tick cooldown each decision cycle
     cooldownManager.tick();
 
@@ -91,9 +89,13 @@ export function UIProvider({ children, persona = null }) {
       } else {
         console.log(`[UI Adaptation] Final action is noop (${finalAction}), skipping`);
       }
-    } else {
+    } else if (personaStable) {
+      // Only use rule-based actions when persona is stable (no DQN action available)
       actions = getActionsForPersona(personaType, null, cooldownManager);
       console.log(`[UI Adaptation] Using rule-based actions for ${personaType}`);
+    } else {
+      // Waiting for persona stability or DQN action
+      console.log(`[UI Adaptation] Waiting - persona not stable and no DQN action yet`);
     }
 
     if (actions.length === 0) return;

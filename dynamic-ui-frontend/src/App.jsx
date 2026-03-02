@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { Toaster } from "react-hot-toast";
 import { useTask } from "./task/TaskContext.jsx";
 import { MetricsProvider, useMetricsCollector } from "./context/MetricsContext.jsx";
 import { HelpTooltipProvider } from "./context/HelpTooltipContext.jsx";
@@ -19,6 +20,7 @@ import SignupPage from "./pages/SignupPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import TransactionPage from "./pages/TransactionPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
+import MetricsDashboard from "./pages/MetricsDashboard.jsx";
 
 /* =========================
    RECOVERY PAGES
@@ -169,6 +171,9 @@ function AppContent() {
     <BrowserRouter>
       <HelpTooltipProvider>
         <UIProvider persona={persona} metrics={metrics}>
+          {/* Toast notification system */}
+          <Toaster position="top-right" />
+
           {/* Header with persona info */}
           <header style={{ padding: "10px 20px", background: "#f5f5f5" }}>
             <div style={{ fontSize: "12px", color: "#666" }}>
@@ -195,6 +200,7 @@ function AppContent() {
           {/* ================= DASHBOARD ================= */}
           <Route path="/home" element={<HomePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/metrics" element={<MetricsDashboard />} />
 
           {/* ================= TRANSACTION ================= */}
           <Route path="/transaction" element={<TransactionPage />} />
