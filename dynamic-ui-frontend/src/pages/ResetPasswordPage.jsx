@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
@@ -37,7 +38,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Set New Password</AdaptiveHeading>
 
@@ -98,6 +101,7 @@ export default function ResetPasswordPage() {
           Back
         </AdaptiveButton>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

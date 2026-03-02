@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
@@ -117,7 +118,9 @@ export default function RecoveryPage() {
   }
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Account Recovery</AdaptiveHeading>
 
@@ -287,5 +290,6 @@ export default function RecoveryPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

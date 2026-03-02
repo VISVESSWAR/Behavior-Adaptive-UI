@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
@@ -70,8 +71,10 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="page">
-      <div className="card">
+    <>
+      <HelpBar pageId="signup" />
+      <div className="page">
+        <div className="card">
         <AdaptiveHeading level={2}>Signup</AdaptiveHeading>
 
         <select
@@ -200,5 +203,6 @@ export default function SignupPage() {
         </AdaptiveButton>
       </div>
     </div>
+    </>
   );
 }

@@ -2,12 +2,22 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
 import "../styles.css";
 import { logEvent } from "../logging/eventLogger.jsx";
-export default function OtpRecoverPage() {
+export default function OtpVerifyPage() {
+  return (
+    <>
+      <HelpBar pageId="recovery" />
+      <OtpVerifyContent />
+    </>
+  );
+}
+
+function OtpVerifyContent() {
   const navigate = useNavigate();
   const email = localStorage.getItem("email");
 

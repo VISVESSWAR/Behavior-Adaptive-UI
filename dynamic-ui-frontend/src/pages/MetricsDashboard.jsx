@@ -1,4 +1,5 @@
 import { useState } from "react";
+import HelpBar from "../components/HelpBar.jsx";
 import {
   BarChart,
   Bar,
@@ -25,6 +26,15 @@ import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.j
 const COLORS = ["#2196f3", "#ff9800", "#4caf50", "#f44336", "#9c27b0", "#00bcd4"];
 
 export default function MetricsDashboard() {
+  return (
+    <>
+      <HelpBar pageId="metrics" />
+      <MetricsDashboardContent />
+    </>
+  );
+}
+
+function MetricsDashboardContent() {
   const [csvData, setCsvData] = useState(null);
   const [parsedData, setParsedData] = useState(null);
   const [stats, setStats] = useState(null);

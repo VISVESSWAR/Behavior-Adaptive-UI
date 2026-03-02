@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTask } from "../task/TaskContext.jsx";
 import { logEvent } from "../logging/eventLogger.jsx";
+import HelpBar from "../components/HelpBar.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import {
@@ -364,7 +365,9 @@ export default function TransactionPage() {
   };
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="transaction" />
+      <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Create Transaction</AdaptiveHeading>
         {!pathType && (
@@ -820,6 +823,7 @@ export default function TransactionPage() {
           real transactions are processed.
         </AdaptiveParagraph>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

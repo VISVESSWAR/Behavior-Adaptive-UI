@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { post } from "../api.jsx";
+import HelpBar from "../components/HelpBar.jsx";
 
 export default function ResultPage() {
   const [result, setResult] = useState(null);
@@ -15,7 +16,9 @@ export default function ResultPage() {
   }, []);
 
   return (
-    <div className="container">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="container">
       <h2>Recovery Result</h2>
 
       {result?.success && (

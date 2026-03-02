@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "../styles.css";
+import HelpBar from "../components/HelpBar.jsx";
 
 export default function TapWaitPage() {
   const [count, setCount] = useState(0);
@@ -28,12 +29,15 @@ export default function TapWaitPage() {
   }, [email, threshold]);
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card">
         <h2>Waiting for Peer Approval</h2>
         <p>Approved peers: {count} / {threshold}</p>
         <p>Please wait while your peers approve recovery.</p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

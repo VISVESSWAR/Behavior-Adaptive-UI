@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { logEvent } from "../logging/eventLogger.jsx";
 import { get } from "../api.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
+import HelpBar from "../components/HelpBar.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
 import "../styles.css";
 
@@ -78,8 +79,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="page">
-      <div className="card wide">
+    <>
+      <HelpBar pageId="home" />
+      <div className="page">
+        <div className="card wide">
         <AdaptiveHeading level={2}>Dashboard</AdaptiveHeading>
 
         <select
@@ -158,7 +161,8 @@ export default function HomePage() {
           ) : (
             <AdaptiveParagraph>No pending recovery requests.</AdaptiveParagraph>
           ))}
+        </div>
       </div>
-    </div>
+      </>
   );
 }

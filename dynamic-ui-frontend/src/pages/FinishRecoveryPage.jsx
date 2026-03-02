@@ -2,6 +2,7 @@ import { post } from "../api.jsx";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles.css";
+import HelpBar from "../components/HelpBar.jsx";
 
 export default function FinishRecoveryPage() {
   const [status, setStatus] = useState("Recovering...");
@@ -38,11 +39,14 @@ export default function FinishRecoveryPage() {
   }, [navigate]);
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card">
         <h2>Recovery Result</h2>
         <p>{status}</p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

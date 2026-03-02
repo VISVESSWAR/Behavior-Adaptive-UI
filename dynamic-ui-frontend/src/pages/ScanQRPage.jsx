@@ -2,6 +2,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import "../styles.css";
 
 export default function ScanQRPage() {
@@ -54,12 +55,15 @@ export default function ScanQRPage() {
   }, [email, threshold, navigate]);
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card wide">
         <h2>Scan Peer QR Codes</h2>
         <div id="reader"></div>
         <p>Collected: {shares.length} / {threshold}</p>
       </div>
     </div>
+    </>
   );
 }

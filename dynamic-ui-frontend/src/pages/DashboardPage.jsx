@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useMetricsCollector } from "../context/MetricsContext.jsx";
+import HelpBar from "../components/HelpBar.jsx";
 import IndexedDBManager from "../utils/indexedDBManager.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
@@ -95,7 +96,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ padding: "40px 20px", maxWidth: "1200px", margin: "0 auto" }}>
+    <>
+      <HelpBar pageId="dashboard" />
+      <div style={{ padding: "40px 20px", maxWidth: "1200px", margin: "0 auto" }}>
       <AdaptiveHeading level={1} style={{ marginBottom: "30px" }}>
         Analytics Dashboard
       </AdaptiveHeading>
@@ -373,6 +376,7 @@ export default function DashboardPage() {
           Export Dataset (CSV)
         </AdaptiveButton>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

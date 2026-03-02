@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
+import HelpBar from "../components/HelpBar.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
@@ -64,7 +65,9 @@ export default function OtpRecoverPage() {
   }
 
   return (
-    <div className="page">
+    <>
+      <HelpBar pageId="recovery" />
+      <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Verify OTP</AdaptiveHeading>
 
@@ -129,6 +132,7 @@ export default function OtpRecoverPage() {
           Back
         </AdaptiveButton>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
