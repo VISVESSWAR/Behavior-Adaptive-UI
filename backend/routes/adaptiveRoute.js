@@ -4,7 +4,8 @@ import express from "express";
 
 export const router = express.Router();
 
-const ML_SERVER = "http://localhost:5001/predict-action";
+const ML_SERVER = "http://localhost:5001/adaptive-action";
+// const ML_SERVER = "http://localhost:5001/predict-action";
 const TIMEOUT_MS = 1200;   // prevent UI lag
 const FALLBACK_ACTION = 0; // restore default layout
 
