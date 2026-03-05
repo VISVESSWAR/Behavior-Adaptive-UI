@@ -5,7 +5,7 @@ import AdaptiveButton from "./AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "./AdaptiveText.jsx";
 import useUIVariants from "../adaptation/useUIVariants.jsx";
 
-export default function HelpBar({ pageId = "default" }) {
+export default function HelpBar({ pageId = "default", forceOpen = false }) {
   const [isVisible, setIsVisible] = useState(false);
   const [helpContent, setHelpContent] = useState([]);
   const { metricsCollectorRef } = useMetricsCollector();
@@ -16,6 +16,14 @@ export default function HelpBar({ pageId = "default" }) {
     const content = getHelpContentForPage(pageId);
     setHelpContent(content);
   }, [pageId]);
+
+  // Handle force open from action 9
+  useEffect(() => {
+    if (forceOpen) {
+      setIsVisible(true);
+      console.log("[HelpBar] Help menu auto-opened by action 9");
+    }
+  }, [forceOpen]);
 
   // Log visibility toggle to metrics
   const handleToggleVisibility = () => {
@@ -30,18 +38,6 @@ export default function HelpBar({ pageId = "default" }) {
         pageId,
         visible: newVisibility,
       };
-
-      // Use window metrics collector if available
-      if (window.__metricsCollector) {
-        window.__metricsCollector.onUIEvent({
-          event: "help_visibility_toggle",
-          source: "HelpBar",
-          details: {
-            pageId,
-            visible: newVisibility,
-          },
-        });
-      }
 
       console.log("[HelpBar] Help visibility toggled:", logData);
     }

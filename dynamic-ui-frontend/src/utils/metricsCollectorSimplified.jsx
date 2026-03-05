@@ -23,7 +23,11 @@ const STATE_COL_ORDER = [
   "s_jerk_mean",
   "s_persona_novice_old",
   "s_persona_intermediate",
-  "s_persona_expert"
+  "s_persona_expert",
+  "s_ui_button_level",
+  "s_ui_text_level",
+  "s_ui_spacing_level",
+  "s_ui_font_level"
 ];
 
 // Opposite action pairs for feedback-reverse (user dislike → apply opposite)
@@ -48,7 +52,18 @@ export class MetricsCollector {
     this.currentAction = -1; // No action yet
     this.currentDQNAction = -1; // DQN action fetched at snapshot time
     this.currentPersona = null;
-    this.currentUIState = null;
+    this.currentUIState = {
+      buttonSize: 0,
+      textSize: 0,
+      fontWeight: 0,
+      spacing: 0,
+      borderRadius: 0,
+      shadowLevel: 0,
+      lineHeight: 0,
+      iconSize: 0,
+      cardPadding: 0,
+      tooltips: false,
+    };
     this.currentTaskData = null; // Task tracking data
     this.personaConfidence = null; // Store persona confidence separately
     this.isIdle = false; // Idle state flag - gates DQN inference
@@ -692,8 +707,8 @@ export class MetricsCollector {
       const prev = this.snapshots[this.snapshots.length - 2];
       const curr = this.snapshots[this.snapshots.length - 1];
 
-      const s = this.buildStateVector(prev.metrics, prev.persona);
-      const s_prime = this.buildStateVector(curr.metrics, curr.persona);
+      const s = this.buildStateVector(prev.metrics, prev.persona, prev.uiState);
+      const s_prime = this.buildStateVector(curr.metrics, curr.persona, curr.uiState);
       if (s === null || s_prime === null) {
         console.warn(
           "[MetricsCollector] Skipping transition - invalid state vector (metrics/persona missing)"
@@ -786,13 +801,18 @@ export class MetricsCollector {
     return snapshot;
   }
 
-  // Build state vector matching DQN format
-  buildStateVector(metrics, persona) {
+  // Build state vector matching DQN format (returns OBJECT like snapshotToStateVector)
+  buildStateVector(metrics, persona, uiState) {
     if (!metrics || !persona) return null;
 
     const personaType = persona.persona || persona.type || "intermediate";
+    
+    // ⚠️ Diagnostic: check if uiState is missing
+    if (!uiState || Object.keys(uiState).length === 0) {
+      console.warn("[MetricsCollector.buildStateVector] ⚠️  uiState is missing or empty - UI variants will be 0");
+    }
 
-    const s = {
+    return {
       s_session_duration: metrics.s_session_duration || 0,
       s_total_distance: metrics.s_total_distance || 0,
       s_num_actions: metrics.s_num_actions || 0,
@@ -808,10 +828,12 @@ export class MetricsCollector {
       s_persona_novice_old: personaType === "novice_old" ? 1 : 0,
       s_persona_intermediate: personaType === "intermediate" ? 1 : 0,
       s_persona_expert: personaType === "expert" ? 1 : 0,
+      // ✅ Add UI variants (normalized 0-1)
+      s_ui_button_level: uiState ? Math.min((uiState.buttonSize || 0) / 6.0, 1.0) : 0,
+      s_ui_text_level: uiState ? Math.min((uiState.textSize || 0) / 6.0, 1.0) : 0,
+      s_ui_spacing_level: uiState ? Math.min((uiState.spacing || 0) / 6.0, 1.0) : 0,
+      s_ui_font_level: uiState ? Math.min((uiState.fontWeight || 0) / 6.0, 1.0) : 0,
     };
-
-    // Convert object → ordered array
-    return STATE_COL_ORDER.map(k => s[k]);
   }
 
   // Mark flow as complete
@@ -1062,11 +1084,11 @@ export class MetricsCollector {
       // Check if state vectors are buildable
       const prev = this.snapshots[this.snapshots.length - 2];
       const curr = this.snapshots[this.snapshots.length - 1];
-      const s = this.buildStateVector(prev.metrics, prev.persona);
-      const s_prime = this.buildStateVector(curr.metrics, curr.persona);
+      const s = this.buildStateVector(prev.metrics, prev.persona, prev.uiState);
+      const s_prime = this.buildStateVector(curr.metrics, curr.persona, curr.uiState);
       
       if (s && s_prime) {
-        console.log(`  ✓ Latest state vectors valid (15 features each)`);
+        console.log(`  ✓ Latest state vectors valid (19 features each: 12 metrics + 3 persona + 4 UI variants)`);
       } else {
         console.log(`  ✗ Latest state vectors INVALID:`);
         console.log(`    - prev state: ${s ? "✓" : "✗ (missing metrics or persona)"}`);

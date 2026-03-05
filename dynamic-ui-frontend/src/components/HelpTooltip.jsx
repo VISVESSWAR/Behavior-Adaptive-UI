@@ -13,15 +13,29 @@ const TOOLTIP_MESSAGES = {
   default: "Need help? This element provides additional functionality",
 };
 
-export default function HelpTooltip() {
+export default function HelpTooltip({ forceOpen = false }) {
   const {
     isEnabled,
     activeTooltip,
     tooltipPosition,
     dismissTooltip,
+    toggleHelpMode,
   } = useContext(HelpTooltipContext);
 
   const [isVisible, setIsVisible] = useState(false);
+
+  // Handle action 9 - auto-enable help mode
+  useEffect(() => {
+    if (forceOpen) {
+      toggleHelpMode(true);
+      console.log("[HelpTooltip] Help mode auto-enabled by action 9");
+      // Auto-disable after 30 seconds to not be intrusive
+      const timer = setTimeout(() => {
+        toggleHelpMode(false);
+      }, 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [forceOpen, toggleHelpMode]);
 
   // Show/hide with fade effect
   useEffect(() => {

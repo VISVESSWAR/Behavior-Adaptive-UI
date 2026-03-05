@@ -135,7 +135,16 @@ export function snapshotToStateVector(snapshot) {
     ...personaOneHot,
   };
 
-  return normalized;
+  // ✅ ADD UI VARIANTS TO STATE VECTOR (4 new features for training context)
+  const uiState = snapshot.uiState || {};
+  const uiNormalized = {
+    s_ui_button_level: Math.min((uiState.buttonSize || 0) / 6.0, 1.0),
+    s_ui_text_level: Math.min((uiState.textSize || 0) / 6.0, 1.0),
+    s_ui_spacing_level: Math.min((uiState.spacing || 0) / 6.0, 1.0),
+    s_ui_font_level: Math.min((uiState.fontWeight || 0) / 6.0, 1.0),
+  };
+
+  return { ...normalized, ...uiNormalized };
 }
 
 // Transition builder: pairs consecutive snapshots to build DQN transitions
@@ -245,6 +254,10 @@ export class TransitionBuilder {
       "s_persona_novice_old",
       "s_persona_intermediate",
       "s_persona_expert",
+      "s_ui_button_level",
+      "s_ui_text_level",
+      "s_ui_spacing_level",
+      "s_ui_font_level",
     ];
 
     // CSV header

@@ -362,18 +362,50 @@ class IndexedDBManager {
         return null;
       }
 
-      // s is an array of 15 values
-      const stateValues = t.s.slice(0, 15);
-      
-      // s_prime is an array of 15 values
-      const nextStateValues = t.s_prime.slice(0, 15);
-      
-      // Extract experiment mode from transition metadata
-      const experimentMode = t.metadata?.experimentMode || "unknown";
+      try {
+        // Parse s if it's a string (JSON stringified), otherwise use as-is
+        let sArray, sPrimeArray;
+        
+        try {
+          sArray = typeof t.s === "string" ? JSON.parse(t.s) : t.s;
+        } catch (e) {
+          console.error("[IndexedDB] Failed to parse t.s:", t.s, e);
+          sArray = [];
+        }
+        
+        try {
+          sPrimeArray = typeof t.s_prime === "string" ? JSON.parse(t.s_prime) : t.s_prime;
+        } catch (e) {
+          console.error("[IndexedDB] Failed to parse t.s_prime:", t.s_prime, e);
+          sPrimeArray = [];
+        }
 
-      return [...stateValues, t.a, experimentMode, t.r, ...nextStateValues, t.done ? 1 : 0]
-        .map((v) => (typeof v === "number" ? v.toFixed(6) : v))
-        .join(",");
+        // Ensure both are arrays
+        if (!Array.isArray(sArray)) {
+          console.warn("[IndexedDB] After parsing, sArray is not an array:", sArray);
+          sArray = [];
+        }
+        if (!Array.isArray(sPrimeArray)) {
+          console.warn("[IndexedDB] After parsing, sPrimeArray is not an array:", sPrimeArray);
+          sPrimeArray = [];
+        }
+
+        // s is an array of 15 values
+        const stateValues = sArray.slice(0, 15);
+        
+        // s_prime is an array of 15 values
+        const nextStateValues = sPrimeArray.slice(0, 15);
+        
+        // Extract experiment mode from transition metadata
+        const experimentMode = t.metadata?.experimentMode || "unknown";
+
+        return [...stateValues, t.a, experimentMode, t.r, ...nextStateValues, t.done ? 1 : 0]
+          .map((v) => (typeof v === "number" ? v.toFixed(6) : v))
+          .join(",");
+      } catch (rowError) {
+        console.error("[IndexedDB] Error processing row:", rowError, t);
+        return null;
+      }
     }).filter(row => row !== null);
 
     const csv = [header.join(","), ...rows].join("\n");

@@ -370,6 +370,53 @@ export default function TransactionPage() {
       <div className="page">
       <div className="card">
         <AdaptiveHeading level={2}>Create Transaction</AdaptiveHeading>
+        
+        {/* Transaction Mode Selector - Always visible */}
+        <div style={{ marginBottom: "15px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <AdaptiveParagraph
+            style={{ fontWeight: "bold", width: "100%", marginBottom: "8px" }}
+          >
+            Transaction Mode:
+          </AdaptiveParagraph>
+          {TRANSACTION_PATHS.map((path) => (
+            <AdaptiveButton
+              key={path}
+              onClick={() => {
+                setPathType(path);
+                setCurrentStep(0);
+                setAmount("");
+                setReceiver("");
+                setIfscCode("");
+                setUpiId("");
+                setQrScanned(false);
+                setSuccess(false);
+                setError("");
+
+                logEvent({
+                  type: "transaction_mode_selected",
+                  flowId: FLOW_ID,
+                  stepId: STEP_ID,
+                  selectedPath: path,
+                });
+              }}
+              style={{
+                padding: "8px 12px",
+                flex: "1",
+                minWidth: "140px",
+                backgroundColor: pathType === path ? "#2196f3" : "#f0f0f0",
+                color: pathType === path ? "white" : "#333",
+                border: pathType === path ? "1px solid #1976d2" : "1px solid #ddd",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: pathType === path ? "bold" : "normal",
+                transition: "all 0.2s",
+              }}
+            >
+              {path.replace(/_/g, " ").toUpperCase()}
+            </AdaptiveButton>
+          ))}
+        </div>
+        
         {!pathType && (
           <div style={{ marginBottom: "15px" }}>
             <AdaptiveParagraph

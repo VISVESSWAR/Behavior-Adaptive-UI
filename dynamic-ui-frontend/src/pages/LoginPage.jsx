@@ -58,6 +58,9 @@ export default function LoginPage() {
       // Mark task as completed on successful login
       task.completeTask();
 
+      // Show success toast
+      toast.success(`Welcome back, ${email.split('@')[0]}!`);
+
       nav("/home");
     } catch (err) {
       logEvent({
@@ -66,7 +69,7 @@ export default function LoginPage() {
         stepId: STEP_ID,
         error: err.message,
       });
-      toast.error(err.message);
+      toast.error(`Login failed: ${err.message}`);
     }
   }
 

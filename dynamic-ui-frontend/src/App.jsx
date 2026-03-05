@@ -51,6 +51,7 @@ function AppContent() {
   const metricsCollectorRef = useRef(null);
   const task = useTask();
   const { metricsCollectorRef: contextCollectorRef } = useMetricsCollector();
+  const [lastDQNAction, setLastDQNAction] = useState(-1); // Track DQN action for UI reactions
 
   // Initialize global metrics collector on mount
   useEffect(() => {
@@ -152,6 +153,14 @@ function AppContent() {
       ) {
         const snapshot = await metricsCollectorRef.current.collectSnapshot();
         if (snapshot) {
+          // Track DQN action for UI reactions (e.g., action 9 = enable_tooltips)
+          if (snapshot.dqnAction >= 0) {
+            setLastDQNAction(snapshot.dqnAction);
+            if (snapshot.dqnAction === 9) {
+              console.log("[App] Action 9 (enable_tooltips) detected - opening help menu");
+            }
+          }
+
           console.log("[App] Snapshot collected:", {
             timestamp: new Date(snapshot.timestamp).toLocaleTimeString(),
             persona:
@@ -172,7 +181,7 @@ function AppContent() {
       <HelpTooltipProvider>
         <UIProvider persona={persona} metrics={metrics}>
           {/* Toast notification system */}
-          <Toaster position="top-right" />
+          <Toaster position="top-center" />
 
           
 
@@ -180,7 +189,7 @@ function AppContent() {
           <Navbar />
 
           {/* Help Tooltip System - Activated by action 9 */}
-          <HelpTooltip />
+          <HelpTooltip forceOpen={lastDQNAction === 9} />
 
           {/* Adaptation Debugger */}
           <AdaptationDebugger />

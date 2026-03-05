@@ -59,7 +59,7 @@ export default function Navbar() {
   // navigationItems.sort((a, b) => a.label.localeCompare(b.label));
 
   const getActiveStyle = (path) =>
-    location.pathname === path ? "bg-blue-600 text-white" : "bg-transparent";
+    location.pathname === path ? "bg-blue-600" : "";
 
   /* ---------- RENDER ---------- */
 
@@ -81,14 +81,16 @@ export default function Navbar() {
               <AdaptiveButton
                 key={item.label}
                 onClick={item.action}
-                className="px-4 py-2 bg-blue-700 hover:bg-blue-600 hover:text-white border border-gray-300 transition"
+                style={{ backgroundColor: "#1d4ed8", color: "white" }}
+                className="px-4 py-2 hover:bg-blue-600 text-white border border-blue-400 transition"
               >
                 {item.label}
               </AdaptiveButton>
             ) : (
               <Link key={item.label} to={item.path}>
                 <AdaptiveButton
-                  className={`px-4 py-2 bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+                  style={{ backgroundColor: location.pathname === item.path ? "#1e40af" : "#1d4ed8", color: "white" }}
+                  className="px-4 py-2 hover:bg-blue-600 text-white border border-blue-400 transition"
                 >
                   {item.label}
                 </AdaptiveButton>
@@ -109,7 +111,8 @@ export default function Navbar() {
                   item.action();
                   setMenuOpen(false);
                 }}
-                className={`px-4 py-2 w-full bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+                style={{ backgroundColor: "#1d4ed8", color: "white" }}
+                className="px-4 py-2 w-full hover:bg-blue-600 text-white border border-blue-400 transition"
               >
                 {item.label}
               </AdaptiveButton>
@@ -120,7 +123,8 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
               >
                 <AdaptiveButton
-                  className={`px-4 py-2 w-full bg-blue-700 hover:bg-blue-600 hover:text-white border border-blue-300 transition ${getActiveStyle(item.path)}`}
+                  style={{ backgroundColor: location.pathname === item.path ? "#1e40af" : "#1d4ed8", color: "white" }}
+                  className="px-4 py-2 w-full hover:bg-blue-600 text-white border border-blue-400 transition"
                 >
                   {item.label}
                 </AdaptiveButton>
