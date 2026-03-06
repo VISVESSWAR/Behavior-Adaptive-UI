@@ -3,7 +3,12 @@
 
 import { TransitionBuilder } from "./snapshotSchema.jsx";
 import IndexedDBManager from "./indexedDBManager.jsx";
-import { metricsToStateVector, getDQNAction, decideFinalAction, getExperimentMode } from "./dqnAdapter.jsx";
+import {
+  metricsToStateVector,
+  getDQNAction,
+  decideFinalAction,
+  getExperimentMode,
+} from "./dqnAdapter.jsx";
 import EpsilonGreedyExplorer from "./epsilonGreedy.jsx";
 import { getCooldownManager } from "../adaptation/personaActionMapper.jsx";
 import { appendRLLog, exportRLLogs, clearRLLogs } from "./rlLogger.jsx";
@@ -27,17 +32,21 @@ const STATE_COL_ORDER = [
   "s_ui_button_level",
   "s_ui_text_level",
   "s_ui_spacing_level",
-  "s_ui_font_level"
+  "s_ui_font_level",
 ];
 
 // Opposite action pairs for feedback-reverse (user dislike → apply opposite)
 const oppositeActionMap = {
-  0: 0,        // noop → noop
-  1: 2, 2: 1,  // button_up ↔ button_down
-  3: 4, 4: 3,  // text_up ↔ text_down
-  5: 6, 6: 5,  // font_up ↔ font_down
-  7: 8, 8: 7,  // spacing_up ↔ spacing_down
-  9: 9,        // enable_tooltips → enable_tooltips
+  0: 0, // noop → noop
+  1: 2,
+  2: 1, // button_up ↔ button_down
+  3: 4,
+  4: 3, // text_up ↔ text_down
+  5: 6,
+  6: 5, // font_up ↔ font_down
+  7: 8,
+  8: 7, // spacing_up ↔ spacing_down
+  9: 9, // enable_tooltips → enable_tooltips
 };
 
 export class MetricsCollector {
@@ -67,7 +76,7 @@ export class MetricsCollector {
     this.currentTaskData = null; // Task tracking data
     this.personaConfidence = null; // Store persona confidence separately
     this.isIdle = false; // Idle state flag - gates DQN inference
-    
+
     // Transaction tracking (tied to snapshot windows)
     this.transactionStatus = {
       active: false,
@@ -75,28 +84,28 @@ export class MetricsCollector {
       startTime: null,
       completeReason: null, // "auto" or "user"
     };
-    
+
     // User feedback from Like/Dislike buttons (attached to snapshot for RL training)
     this.latestFeedback = 0;
-    
+
     // Feedback override for next decision: "repeat", "reverse", or "neutral" (one-time effect)
     this.feedbackOverride = {
       active: false,
       type: null, // "repeat" | "reverse" | "neutral"
       action: null,
     };
-    
+
     // Epsilon-greedy exploration
     this.explorer = new EpsilonGreedyExplorer(0.4, 0.1, 0.995);
     this.lastActionSource = null; // Track action source for logging
-    
+
     // Transaction path type assignment (random: bank_transfer, upi_payment, qr_payment)
     this.pathType = this.assignPathType();
     console.log(`[MetricsCollector] Assigned pathType: ${this.pathType}`);
-    
+
     this.dbManager = new IndexedDBManager();
     this.dbReady = false; // Track initialization state
-    
+
     // ⚠️ CRITICAL: Wait for DB to initialize before allowing collection
     this.dbManager
       .init()
@@ -105,7 +114,10 @@ export class MetricsCollector {
         console.log("[MetricsCollector] IndexedDB ready for data collection");
       })
       .catch((err) => {
-        console.error("[MetricsCollector] Failed to init DB - data will NOT be persisted:", err);
+        console.error(
+          "[MetricsCollector] Failed to init DB - data will NOT be persisted:",
+          err,
+        );
       });
   }
 
@@ -113,9 +125,13 @@ export class MetricsCollector {
   setIdleState(isIdle) {
     this.isIdle = isIdle;
     if (isIdle) {
-      console.log("[MetricsCollector] Idle state activated - DQN inference paused");
+      console.log(
+        "[MetricsCollector] Idle state activated - DQN inference paused",
+      );
     } else {
-      console.log("[MetricsCollector] Idle state cleared - DQN inference resumed");
+      console.log(
+        "[MetricsCollector] Idle state cleared - DQN inference resumed",
+      );
     }
   }
 
@@ -141,13 +157,13 @@ export class MetricsCollector {
       startTime: Date.now(),
       completeReason: null,
     };
-    
+
     // Expose to window for UI/debugger access
     if (typeof window !== "undefined") {
       window.__metricsCollector = window.__metricsCollector || {};
       window.__metricsCollector.transactionStatus = this.transactionStatus;
     }
-    
+
     console.log(`[MetricsCollector] Transaction started: ${transactionId}`);
     return transactionId;
   }
@@ -167,7 +183,7 @@ export class MetricsCollector {
     };
 
     console.log(
-      `[MetricsCollector] Transaction completed (${reason}): ${completedTxn.transactionId}, Duration: ${completedTxn.duration}ms`
+      `[MetricsCollector] Transaction completed (${reason}): ${completedTxn.transactionId}, Duration: ${completedTxn.duration}ms`,
     );
 
     // Reset transaction status
@@ -188,9 +204,13 @@ export class MetricsCollector {
   }
 
   // Save transition with exponential backoff retry (max 3 retries, 100ms initial)
-  async saveTransitionWithRetry(transition, maxRetries = 3, initialDelay = 100) {
+  async saveTransitionWithRetry(
+    transition,
+    maxRetries = 3,
+    initialDelay = 100,
+  ) {
     let lastError = null;
-    
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // Mark DB as ready if initialization completed
@@ -201,12 +221,16 @@ export class MetricsCollector {
 
         // Skip if DB not ready yet
         if (!this.dbReady) {
-          console.warn(`[MetricsCollector] DB not ready (attempt ${attempt + 1}/${maxRetries})`);
+          console.warn(
+            `[MetricsCollector] DB not ready (attempt ${attempt + 1}/${maxRetries})`,
+          );
           lastError = new Error("DB not ready");
-          
+
           // Wait before retrying
           if (attempt < maxRetries - 1) {
-            await new Promise(resolve => setTimeout(resolve, initialDelay * Math.pow(2, attempt)));
+            await new Promise((resolve) =>
+              setTimeout(resolve, initialDelay * Math.pow(2, attempt)),
+            );
           }
           continue;
         }
@@ -218,21 +242,21 @@ export class MetricsCollector {
         lastError = err;
         console.warn(
           `[MetricsCollector] Save failed (attempt ${attempt + 1}/${maxRetries}):`,
-          err.message
+          err.message,
         );
 
         // If last attempt, log error but don't crash
         if (attempt === maxRetries - 1) {
           console.error(
             "[MetricsCollector] Failed to save transition after all retries:",
-            lastError
+            lastError,
           );
           return;
         }
 
         // Wait with exponential backoff before retrying
         const delay = initialDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -290,10 +314,11 @@ export class MetricsCollector {
   // Check if it's time to collect a snapshot
   // Call this from a timer or on user interaction
   shouldCollect() {
-    const shouldCollect = Date.now() - this.lastCollectionTime >= this.collectionInterval;
+    const shouldCollect =
+      Date.now() - this.lastCollectionTime >= this.collectionInterval;
     if (shouldCollect) {
       console.log(
-        `[MetricsCollector] shouldCollect=true (${Math.round(Date.now() - this.lastCollectionTime)}ms elapsed >= ${this.collectionInterval}ms)`
+        `[MetricsCollector] shouldCollect=true (${Math.round(Date.now() - this.lastCollectionTime)}ms elapsed >= ${this.collectionInterval}ms)`,
       );
     }
     return shouldCollect;
@@ -313,15 +338,12 @@ export class MetricsCollector {
       window.__metricsCollector.snapshotStartTime = Date.now();
     }
 
-    console.log(
-      `[MetricsCollector] Starting snapshot collection...`,
-      {
-        dbReady: this.dbReady,
-        hasMetrics: !!this.windowMetrics,
-        hasPersona: !!this.currentPersona,
-        snapshots: this.snapshots.length,
-      }
-    );
+    console.log(`[MetricsCollector] Starting snapshot collection...`, {
+      dbReady: this.dbReady,
+      hasMetrics: !!this.windowMetrics,
+      hasPersona: !!this.currentPersona,
+      snapshots: this.snapshots.length,
+    });
 
     // CRITICAL: Even if metrics/persona missing, collect snapshot with defaults
     // Never skip snapshots - preserves consistent 10-second timing
@@ -331,21 +353,21 @@ export class MetricsCollector {
         {
           metricsNull: !this.windowMetrics,
           personaNull: !this.currentPersona,
-        }
+        },
       );
       // Use NULL/UNKNOWN values to avoid misleading training data
       // ⚠️ CRITICAL: Don't use "low" defaults - makes idle look like perfect state
       if (!this.windowMetrics) {
         this.windowMetrics = {
           totalFocusTime: null,
-          misclicks: null,  // null = unknown (don't calculate performance reward)
+          misclicks: null, // null = unknown (don't calculate performance reward)
           scrolls: null,
           clicks: null,
           scrollDepth: null,
           focusTime: null,
           taskDuration: null,
-          mouseSpeed: null,  // null = unknown speed
-          uiSaturation: { text: null, spacing: null, button: null },  // null metrics
+          mouseSpeed: null, // null = unknown speed
+          uiSaturation: { text: null, spacing: null, button: null }, // null metrics
         };
       }
       if (!this.currentPersona) {
@@ -372,36 +394,48 @@ export class MetricsCollector {
     // We'll check override AFTER we determine finalAction in each path
     const applyFeedbackOverride = (proposedAction, baseEpsilon = 0.4) => {
       const override = this.feedbackOverride;
-      
+
       if (!override?.active) {
-        return { action: proposedAction, source: actionSource, epsilon: baseEpsilon };
+        return {
+          action: proposedAction,
+          source: actionSource,
+          epsilon: baseEpsilon,
+        };
       }
 
-      let result = { action: proposedAction, source: actionSource, epsilon: baseEpsilon };
+      let result = {
+        action: proposedAction,
+        source: actionSource,
+        epsilon: baseEpsilon,
+      };
 
       if (override.type === "repeat") {
         // User liked the previous action → repeat it
         result.action = override.action;
         result.source = "feedback-repeat";
         feedbackApplied = true;
-        console.log(`[MetricsCollector] 👍 Feedback: Repeating action ${override.action}`);
-      } 
-      else if (override.type === "reverse") {
+        console.log(
+          `[MetricsCollector] 👍 Feedback: Repeating action ${override.action}`,
+        );
+      } else if (override.type === "reverse") {
         // User disliked the previous action → apply opposite
         const oppositeAction = oppositeActionMap[override.action];
         if (oppositeAction !== undefined) {
           result.action = oppositeAction;
           result.source = "feedback-reverse";
           feedbackApplied = true;
-          console.log(`[MetricsCollector] 👎 Feedback: Reversing action ${override.action} → ${oppositeAction}`);
+          console.log(
+            `[MetricsCollector] 👎 Feedback: Reversing action ${override.action} → ${oppositeAction}`,
+          );
         }
-      }
-      else if (override.type === "neutral") {
+      } else if (override.type === "neutral") {
         // User gave no feedback → boost exploration
         result.epsilon = Math.min(1.0, baseEpsilon + 0.2);
         result.source = "feedback-neutral-explore";
         feedbackApplied = true;
-        console.log(`[MetricsCollector] 🤷 Feedback: Neutral detected, boosting epsilon to ${result.epsilon.toFixed(3)}`);
+        console.log(
+          `[MetricsCollector] 🤷 Feedback: Neutral detected, boosting epsilon to ${result.epsilon.toFixed(3)}`,
+        );
       }
 
       // One-time effect: disable after applying
@@ -419,21 +453,23 @@ export class MetricsCollector {
       idleGated = true;
       actionSource = "idle";
       this.currentDQNAction = dqnAction;
-      
+
       // 🔹 Store both model and final actions for UI + debugger
       if (typeof window !== "undefined") {
         window.__metricsCollector = window.__metricsCollector || {};
         window.__metricsCollector.currentModelAction = dqnAction;
         window.__metricsCollector.currentFinalAction = finalAction;
       }
-      
-      console.log(`[MetricsCollector] IDLE - Using noop action (0), DQN inference paused`);
-      
+
+      console.log(
+        `[MetricsCollector] IDLE - Using noop action (0), DQN inference paused`,
+      );
+
       // Apply feedback override if active (one-time effect per action)
       const override = applyFeedbackOverride(finalAction, 0.4);
       finalAction = override.action;
       actionSource = override.source;
-      
+
       // 📊 Store decision source for debugger + RL analysis
       if (typeof window !== "undefined") {
         window.__metricsCollector = window.__metricsCollector || {};
@@ -452,34 +488,47 @@ export class MetricsCollector {
     } else {
       // Not idle: proceed with DQN action request
       try {
-        const stateVector = metricsToStateVector(this.windowMetrics, this.currentPersona, this.currentUIState);
+        const stateVector = metricsToStateVector(
+          this.windowMetrics,
+          this.currentPersona,
+          this.currentUIState,
+        );
         if (stateVector) {
-          dqnAction = await getDQNAction(stateVector);
+          const uxMetrics = computeUXMetrics(this.windowMetrics);
+
+          dqnAction = await getDQNAction(stateVector, uxMetrics);
           this.currentDQNAction = dqnAction;
-          console.log(`[MetricsCollector] DQN action fetched at snapshot time: ${dqnAction}`);
+          console.log(
+            `[MetricsCollector] DQN action fetched at snapshot time: ${dqnAction}`,
+          );
 
           // EXPERIMENT MODE DECISION: Apply mode-specific strategy (model, random, or guided)
           if (dqnAction >= 0) {
             const decisionResult = decideFinalAction(dqnAction);
             finalAction = decisionResult.finalAction;
             actionSource = decisionResult.source;
-            
+
             // Apply feedback override if active (one-time effect per action)
             const override = applyFeedbackOverride(finalAction, 0.4);
             finalAction = override.action;
             if (feedbackApplied) {
               actionSource = override.source;
             }
-            
+
             explorationData = {
               modelAction: dqnAction,
               finalAction: finalAction,
               source: actionSource,
             };
 
-            const sourceLabel = actionSource === "model" ? "🎯 MODEL" : actionSource === "random" ? "🎲 RANDOM" : "🎯 ANTI";
+            const sourceLabel =
+              actionSource === "model"
+                ? "🎯 MODEL"
+                : actionSource === "random"
+                  ? "🎲 RANDOM"
+                  : "🎯 ANTI";
             console.log(
-              `[MetricsCollector] ACTION SOURCE: ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}`
+              `[MetricsCollector] ACTION SOURCE: ${sourceLabel} - Model: ${dqnAction}, Final: ${finalAction}`,
             );
             console.log(`ACTION SOURCE: ${actionSource}`);
 
@@ -508,20 +557,22 @@ export class MetricsCollector {
             // Model action invalid, use noop
             finalAction = 0;
             actionSource = "fallback";
-            console.log(`[MetricsCollector] DQN returned invalid action, using noop`);
-            
+            console.log(
+              `[MetricsCollector] DQN returned invalid action, using noop`,
+            );
+
             // Apply feedback override if active (one-time effect per action)
             const override = applyFeedbackOverride(finalAction, 0.4);
             finalAction = override.action;
             actionSource = override.source;
-            
+
             // � Store both model and final actions for UI + debugger
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
               window.__metricsCollector.currentModelAction = dqnAction;
               window.__metricsCollector.currentFinalAction = finalAction;
             }
-            
+
             // �📊 Store decision source for debugger + RL analysis
             if (typeof window !== "undefined") {
               window.__metricsCollector = window.__metricsCollector || {};
@@ -543,19 +594,19 @@ export class MetricsCollector {
         dqnAction = -1; // Fallback to rule-based
         finalAction = 0;
         actionSource = "error";
-        
+
         // Apply feedback override if active (one-time effect per action)
         const override = applyFeedbackOverride(finalAction, 0.4);
         finalAction = override.action;
         actionSource = override.source;
-        
+
         // � Store both model and final actions for UI + debugger
         if (typeof window !== "undefined") {
           window.__metricsCollector = window.__metricsCollector || {};
           window.__metricsCollector.currentModelAction = dqnAction;
           window.__metricsCollector.currentFinalAction = finalAction;
         }
-        
+
         // �📊 Store decision source for debugger + RL analysis
         if (typeof window !== "undefined") {
           window.__metricsCollector = window.__metricsCollector || {};
@@ -587,7 +638,7 @@ export class MetricsCollector {
         cooldownMasked = cooldownMgr.isOnCooldown(dqnAction);
         if (cooldownMasked) {
           console.log(
-            `[MetricsCollector] COOLDOWN MASKED: DQN wanted action ${dqnAction}, but got ${finalAction} due to cooldown`
+            `[MetricsCollector] COOLDOWN MASKED: DQN wanted action ${dqnAction}, but got ${finalAction} due to cooldown`,
           );
         }
       }
@@ -596,13 +647,15 @@ export class MetricsCollector {
     // Calculate elapsed time and task data
     const elapsedTime = Date.now() - this.lastCollectionTime;
     const taskData = this.currentTaskData || {};
-    
+
     // ⚠️ CRITICAL: Skip reward calculations when metrics are null (unknown)
     // Idle/cooldown periods should be reward-neutral, not "perfect performance"
-    const metricsAreValid = this.windowMetrics && 
+    const metricsAreValid =
+      this.windowMetrics &&
       this.windowMetrics.misclicks !== null &&
       this.windowMetrics.mouseSpeed !== null;
-    const taskReward = (!metricsAreValid || idleGated) ? 0 : this.calculateTaskReward(taskData);
+    const taskReward =
+      !metricsAreValid || idleGated ? 0 : this.calculateTaskReward(taskData);
 
     const snapshot = {
       timestamp: Date.now(),
@@ -628,14 +681,14 @@ export class MetricsCollector {
       // finalAction will be applied during the NEXT window and influence the next state
       // This preserves causality: (S_t, A_t, S_{t+1}) where A_t is finalAction from THIS snapshot
       // IDLE: When idle, finalAction = 0 (noop)
-      action: finalAction,         // ✅ Final action chosen (after exploration)
-      dqnAction: dqnAction,        // Model action before exploration
-      finalAction: finalAction,    // Action actually applied (may differ from dqnAction)
+      action: finalAction, // ✅ Final action chosen (after exploration)
+      dqnAction: dqnAction, // Model action before exploration
+      finalAction: finalAction, // Action actually applied (may differ from dqnAction)
       ruleBasedAction: this.currentAction, // Fallback action (for reference only)
-      isIdleGated: idleGated,      // Flag for learning to skip this transition
-      
+      isIdleGated: idleGated, // Flag for learning to skip this transition
+
       // Exploration tracking for RL analysis
-      actionSource: actionSource,  // "model" | "explore" | "idle" | "fallback" | "error"
+      actionSource: actionSource, // "model" | "explore" | "idle" | "fallback" | "error"
       explorationData: explorationData, // { modelAction, finalAction, source, epsilon, nextEpsilon }
 
       // Human-in-the-loop feedback (attached to this snapshot)
@@ -649,7 +702,7 @@ export class MetricsCollector {
         cooldownMasked: cooldownMasked,
         metricsNull: !metricsAreValid,
         modelAction: dqnAction,
-        finalAction: finalAction
+        finalAction: finalAction,
       },
 
       uiState: this.currentUIState || {},
@@ -669,7 +722,7 @@ export class MetricsCollector {
         startTime: this.transactionStatus.startTime,
         completeReason: this.transactionStatus.completeReason,
       },
-      
+
       // Transaction path type (experiment condition)
       pathType: this.pathType,
 
@@ -680,7 +733,7 @@ export class MetricsCollector {
 
     this.snapshots.push(snapshot);
     this.lastCollectionTime = Date.now();
-    
+
     // Detect neutral feedback: if no feedback was given during this snapshot window,
     // set neutral override to boost exploration on next decision
     if (!window.__metricsCollector?.lastDecisionInfo?.feedbackGiven) {
@@ -690,7 +743,7 @@ export class MetricsCollector {
         action: null,
       };
     }
-    
+
     // Reset feedback after attaching to snapshot (one-time use)
     this.latestFeedback = 0;
 
@@ -708,10 +761,14 @@ export class MetricsCollector {
       const curr = this.snapshots[this.snapshots.length - 1];
 
       const s = this.buildStateVector(prev.metrics, prev.persona, prev.uiState);
-      const s_prime = this.buildStateVector(curr.metrics, curr.persona, curr.uiState);
+      const s_prime = this.buildStateVector(
+        curr.metrics,
+        curr.persona,
+        curr.uiState,
+      );
       if (s === null || s_prime === null) {
         console.warn(
-          "[MetricsCollector] Skipping transition - invalid state vector (metrics/persona missing)"
+          "[MetricsCollector] Skipping transition - invalid state vector (metrics/persona missing)",
         );
       } else {
         const r_task = curr.taskReward ?? 0;
@@ -722,12 +779,16 @@ export class MetricsCollector {
         // Penalize actions that saturate UI dimensions (text, spacing, button changes)
         if (curr.metrics?.uiSaturation) {
           const sat = curr.metrics.uiSaturation;
-          const saturatedDims = ["text", "spacing", "button"]
-            .filter(k => sat[k] !== null && sat[k] > 0.8).length;
+          const saturatedDims = ["text", "spacing", "button"].filter(
+            (k) => sat[k] !== null && sat[k] > 0.8,
+          ).length;
           r -= 0.03 * saturatedDims;
         }
         // Reward good mouse control (low speed = precise movements)
-        if (curr.metrics?.mouseSpeed !== null && curr.metrics.mouseSpeed < 0.4) {
+        if (
+          curr.metrics?.mouseSpeed !== null &&
+          curr.metrics.mouseSpeed < 0.4
+        ) {
           r += 0.02;
         }
         // Penalize excessive misclicks (sign of poor adaptation)
@@ -743,7 +804,7 @@ export class MetricsCollector {
         const transition = {
           s,
           a: prev.finalAction,
-          r: r,  // Enhanced reward
+          r: r, // Enhanced reward
           r_task,
           r_behavior,
           s_prime,
@@ -758,7 +819,7 @@ export class MetricsCollector {
             stepId: curr.stepId,
             experimentMode: curr.experimentMode || getExperimentMode(),
             explorationData: prev.explorationData || null,
-          }
+          },
         };
 
         // ⚠️ CRITICAL: Save with retry mechanism
@@ -778,10 +839,13 @@ export class MetricsCollector {
           taskTime: curr.task?.elapsedTime || 0,
           success: curr.task?.completed ? 1 : 0,
         };
-        
+
         // Non-blocking async log append
-        appendRLLog(rlLogEntry).catch(err => 
-          console.warn("[MetricsCollector] RL logging failed (non-critical):", err.message)
+        appendRLLog(rlLogEntry).catch((err) =>
+          console.warn(
+            "[MetricsCollector] RL logging failed (non-critical):",
+            err.message,
+          ),
         );
       }
     }
@@ -795,7 +859,7 @@ export class MetricsCollector {
         source: actionSource,
         dbReady: this.dbReady,
         dbSaved: this.snapshots.length >= 2,
-      }
+      },
     );
 
     return snapshot;
@@ -806,10 +870,12 @@ export class MetricsCollector {
     if (!metrics || !persona) return null;
 
     const personaType = persona.persona || persona.type || "intermediate";
-    
+
     // ⚠️ Diagnostic: check if uiState is missing
     if (!uiState || Object.keys(uiState).length === 0) {
-      console.warn("[MetricsCollector.buildStateVector] ⚠️  uiState is missing or empty - UI variants will be 0");
+      console.warn(
+        "[MetricsCollector.buildStateVector] ⚠️  uiState is missing or empty - UI variants will be 0",
+      );
     }
 
     return {
@@ -829,10 +895,18 @@ export class MetricsCollector {
       s_persona_intermediate: personaType === "intermediate" ? 1 : 0,
       s_persona_expert: personaType === "expert" ? 1 : 0,
       // ✅ Add UI variants (normalized 0-1)
-      s_ui_button_level: uiState ? Math.min((uiState.buttonSize || 0) / 6.0, 1.0) : 0,
-      s_ui_text_level: uiState ? Math.min((uiState.textSize || 0) / 6.0, 1.0) : 0,
-      s_ui_spacing_level: uiState ? Math.min((uiState.spacing || 0) / 6.0, 1.0) : 0,
-      s_ui_font_level: uiState ? Math.min((uiState.fontWeight || 0) / 6.0, 1.0) : 0,
+      s_ui_button_level: uiState
+        ? Math.min((uiState.buttonSize || 0) / 6.0, 1.0)
+        : 0,
+      s_ui_text_level: uiState
+        ? Math.min((uiState.textSize || 0) / 6.0, 1.0)
+        : 0,
+      s_ui_spacing_level: uiState
+        ? Math.min((uiState.spacing || 0) / 6.0, 1.0)
+        : 0,
+      s_ui_font_level: uiState
+        ? Math.min((uiState.fontWeight || 0) / 6.0, 1.0)
+        : 0,
     };
   }
 
@@ -893,7 +967,10 @@ export class MetricsCollector {
       console.log("[MetricsCollector] Exported stored transitions as JSON");
       return data;
     } catch (err) {
-      console.error("[MetricsCollector] Failed to export transitions as JSON:", err);
+      console.error(
+        "[MetricsCollector] Failed to export transitions as JSON:",
+        err,
+      );
       return null;
     }
   }
@@ -917,7 +994,10 @@ export class MetricsCollector {
       console.log("[MetricsCollector] Exported stored transitions as CSV");
       return csv;
     } catch (err) {
-      console.error("[MetricsCollector] Failed to export transitions as CSV:", err);
+      console.error(
+        "[MetricsCollector] Failed to export transitions as CSV:",
+        err,
+      );
       return null;
     }
   }
@@ -1036,7 +1116,9 @@ export class MetricsCollector {
         console.log(`  Missing fields: ${validation.missingFields.join(", ")}`);
       }
       if (validation.missingMaskingFields.length > 0) {
-        console.log(`  Missing maskingInfo fields: ${validation.missingMaskingFields.join(", ")}`);
+        console.log(
+          `  Missing maskingInfo fields: ${validation.missingMaskingFields.join(", ")}`,
+        );
       }
     }
     console.log("=".repeat(80) + "\n");
@@ -1058,9 +1140,15 @@ export class MetricsCollector {
     console.log(`  Snapshots collected: ${this.snapshots.length}`);
     console.log(`  Current idle state: ${this.isIdle ? "IDLE" : "ACTIVE"}`);
     console.log(`  Latest feedback: ${this.latestFeedback}`);
-    console.log(`  Current persona: ${this.currentPersona ? "✓ SET" : "✗ NOT SET"}`);
-    console.log(`  Current metrics: ${this.windowMetrics ? "✓ SET" : "✗ NOT SET"}`);
-    console.log(`  Current UI state: ${this.currentUIState ? "✓ SET" : "✗ NOT SET"}`);
+    console.log(
+      `  Current persona: ${this.currentPersona ? "✓ SET" : "✗ NOT SET"}`,
+    );
+    console.log(
+      `  Current metrics: ${this.windowMetrics ? "✓ SET" : "✗ NOT SET"}`,
+    );
+    console.log(
+      `  Current UI state: ${this.currentUIState ? "✓ SET" : "✗ NOT SET"}`,
+    );
 
     console.log(`\n[RECENT SNAPSHOTS]`);
     if (this.snapshots.length === 0) {
@@ -1069,30 +1157,50 @@ export class MetricsCollector {
       const lastSnaps = this.snapshots.slice(-3);
       lastSnaps.forEach((snap, idx) => {
         const snapIdx = this.snapshots.length - (3 - idx);
-        console.log(`  [${snapIdx}] timestamp: ${new Date(snap.timestamp).toISOString()}`);
-        console.log(`       persona: ${snap.persona?.name || "unknown"}, action: ${snap.finalAction}, reward: ${snap.taskReward}`);
-        console.log(`       masking: idle=${snap.maskingInfo?.idleGated}, cooldown=${snap.maskingInfo?.cooldownMasked}, metricsNull=${snap.maskingInfo?.metricsNull}`);
+        console.log(
+          `  [${snapIdx}] timestamp: ${new Date(snap.timestamp).toISOString()}`,
+        );
+        console.log(
+          `       persona: ${snap.persona?.name || "unknown"}, action: ${snap.finalAction}, reward: ${snap.taskReward}`,
+        );
+        console.log(
+          `       masking: idle=${snap.maskingInfo?.idleGated}, cooldown=${snap.maskingInfo?.cooldownMasked}, metricsNull=${snap.maskingInfo?.metricsNull}`,
+        );
       });
     }
 
     console.log(`\n[TRANSITION BUILDING]`);
     if (this.snapshots.length < 2) {
-      console.log(`  ✗ Need at least 2 snapshots to build transitions (currently ${this.snapshots.length})`);
+      console.log(
+        `  ✗ Need at least 2 snapshots to build transitions (currently ${this.snapshots.length})`,
+      );
     } else {
-      console.log(`  ✓ Can build transitions (${this.snapshots.length - 1} potential transitions)`);
-      
+      console.log(
+        `  ✓ Can build transitions (${this.snapshots.length - 1} potential transitions)`,
+      );
+
       // Check if state vectors are buildable
       const prev = this.snapshots[this.snapshots.length - 2];
       const curr = this.snapshots[this.snapshots.length - 1];
       const s = this.buildStateVector(prev.metrics, prev.persona, prev.uiState);
-      const s_prime = this.buildStateVector(curr.metrics, curr.persona, curr.uiState);
-      
+      const s_prime = this.buildStateVector(
+        curr.metrics,
+        curr.persona,
+        curr.uiState,
+      );
+
       if (s && s_prime) {
-        console.log(`  ✓ Latest state vectors valid (19 features each: 12 metrics + 3 persona + 4 UI variants)`);
+        console.log(
+          `  ✓ Latest state vectors valid (19 features each: 12 metrics + 3 persona + 4 UI variants)`,
+        );
       } else {
         console.log(`  ✗ Latest state vectors INVALID:`);
-        console.log(`    - prev state: ${s ? "✓" : "✗ (missing metrics or persona)"}`);
-        console.log(`    - curr state: ${s_prime ? "✓" : "✗ (missing metrics or persona)"}`);
+        console.log(
+          `    - prev state: ${s ? "✓" : "✗ (missing metrics or persona)"}`,
+        );
+        console.log(
+          `    - curr state: ${s_prime ? "✓" : "✗ (missing metrics or persona)"}`,
+        );
       }
     }
 
@@ -1101,6 +1209,26 @@ export class MetricsCollector {
   }
 }
 
+export function computeUXMetrics(metrics) {
+  const wrongClicks = metrics.wrong_clicks || 0;
+  const clicks = metrics.num_clicks || 1;
+
+  const misclick_rate = wrongClicks / clicks;
+
+  const task_completion_time =
+    Date.now() - (metrics.task_start_time || Date.now());
+
+  const total_clicks = clicks;
+
+  const idle_time = metrics.idle_time || 0;
+
+  return {
+    misclick_rate,
+    task_completion_time,
+    total_clicks,
+    idle_time,
+  };
+}
 // INTEGRATION: new MetricsCollector("session_123", "transaction", "confirm"); updateMetrics/Persona via useEffect hooks; collectSnapshot every 10s; export CSV on flow complete
 
 export default MetricsCollector;
