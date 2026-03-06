@@ -1,6 +1,7 @@
 // DQN Adapter: call ML backend to get optimal action from state vector; cache predictions for 500ms
 
 import { ACTION_SPACE } from "../adaptation/actionSpace.jsx";
+import { SESSION_ID } from "../logging/session.jsx";
 
 const API_BASE = "http://localhost:5000";
 const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many requests
@@ -137,8 +138,13 @@ export function computeUXMetrics(metrics) {
   };
 }
 
+// Build task ID from flowId and stepId for task-level UX analysis
+export function buildTaskId(flowId, stepId) {
+  return `${flowId}_${stepId}`;
+}
+
 // Fetch action from DQN model backend
-export async function getDQNAction(stateVector, metrics) {
+export async function getDQNAction(stateVector, metrics, flowId, stepId) {
   if (!stateVector) return -1;
 
   // Rate-limit DQN calls to avoid API flooding
@@ -150,6 +156,8 @@ export async function getDQNAction(stateVector, metrics) {
   try {
     const payload = {
       user_id: localStorage.getItem("user_id") || "user_demo",
+      session_id: SESSION_ID,
+      task_id: buildTaskId(flowId, stepId),
 
       adaptive_enabled:
         localStorage.getItem("adaptive_enabled") === "true",

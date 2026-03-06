@@ -496,7 +496,7 @@ export class MetricsCollector {
         if (stateVector) {
           const uxMetrics = computeUXMetrics(this.windowMetrics);
 
-          dqnAction = await getDQNAction(stateVector, uxMetrics);
+          dqnAction = await getDQNAction(stateVector, uxMetrics, this.flowId, this.stepId);
           this.currentDQNAction = dqnAction;
           console.log(
             `[MetricsCollector] DQN action fetched at snapshot time: ${dqnAction}`,
