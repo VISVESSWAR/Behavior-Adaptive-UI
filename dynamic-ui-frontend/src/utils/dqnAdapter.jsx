@@ -42,6 +42,7 @@ export function setExperimentMode(mode) {
 
 let lastPredictionTime = 0;
 let lastAction = -1;
+let lastAdaptiveResponse = null;
 
 // Convert metrics to normalized DQN state vector (19 elements)
 // Features 1-12: mouse behavior metrics
@@ -78,7 +79,39 @@ export function metricsToStateVector(metrics, persona, uiState) {
 
   console.log("RL STATE LENGTH:", stateVector.length);
 
+  // ========== ADAPTIVE DEMO MODE OVERRIDES ==========
+  // Simulate different behavioral states for demonstration purposes
+  if (typeof window !== "undefined" && window.__adaptiveDemoMode) {
+    console.log("Adaptive demo mode:", window.__adaptiveDemoMode);
+    
+    if (window.__adaptiveDemoMode === "confused") {
+      // Confused user: low velocity, high variability, jerky movements
+      stateVector[5] = 0.05;   // s_vel_mean: very slow (0.05 normalized ~ 100 px/s)
+      stateVector[6] = 0.9;    // s_vel_std: high variance in velocity
+      stateVector[10] = 0.8;   // s_curve_std: high curvature variance (jerky)
+    } 
+    else if (window.__adaptiveDemoMode === "novice") {
+      // Novice user: slower speed, deliberate but slower actions
+      stateVector[4] = 0.9;    // s_mean_time_per_action: slow action time
+      stateVector[5] = 0.15;   // s_vel_mean: moderate slow speed
+    } 
+    else if (window.__adaptiveDemoMode === "expert") {
+      // Expert user: very fast, smooth, precise movements
+      stateVector[5] = 0.95;   // s_vel_mean: very fast (0.95 normalized ~ 1900 px/s)
+      stateVector[10] = 0.05;  // s_curve_std: very smooth (low curvature variance)
+    }
+  }
+
   return stateVector;
+}
+
+// Store and retrieve the last adaptive response
+export function getLastAdaptiveResponse() {
+  return lastAdaptiveResponse;
+}
+
+export function setLastAdaptiveResponse(response) {
+  lastAdaptiveResponse = response;
 }
 
 // Fetch action from DQN model backend
@@ -107,7 +140,10 @@ export async function getDQNAction(stateVector) {
     lastPredictionTime = now;
     lastAction = data.action ?? -1;
 
-    console.log("[DQN] Predicted action:", lastAction, "state_vector:", stateVector);
+    // Store full response for use by AdaptiveDecisionPanel
+    setLastAdaptiveResponse(data);
+
+    console.log("[DQN] Predicted action:", lastAction, "confidence:", data.confidence, "state_vector:", stateVector);
     return lastAction;
   } catch (error) {
     console.error("[DQN] Request failed:", error.message);

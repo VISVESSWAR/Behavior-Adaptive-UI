@@ -10,6 +10,8 @@ import useScrollDepth from "./hooks/useScrollDepth.jsx";
 import { usePersona } from "./persona/usePersona.jsx";
 import { UIProvider, useUIConfig } from "./adaptation/UIContext.jsx";
 import { AdaptationDebugger } from "./components/AdaptationDebugger.jsx";
+import AdaptiveDemoControls from "./components/AdaptiveDemoControls.jsx";
+import AdaptiveDecisionPanel from "./components/AdaptiveDecisionPanel.jsx";
 import HelpTooltip from "./components/HelpTooltip.jsx";
 import Navbar from "./components/Navbar.jsx";
 import MetricsCollector from "./utils/metricsCollectorSimplified.jsx";
@@ -107,6 +109,13 @@ function AppContent() {
   // Get current UI configuration
   const { uiConfig } = useUIConfig();
 
+  // Store persona globally so AdaptiveDecisionPanel can access it
+  useEffect(() => {
+    if (persona) {
+      window.__currentPersona = persona;
+    }
+  }, [persona]);
+
   // Update metrics in collector EVERY render (so idle time is always tracked)
   useEffect(() => {
     if (metricsCollectorRef.current && metrics) {
@@ -193,6 +202,12 @@ function AppContent() {
 
           {/* Adaptation Debugger */}
           <AdaptationDebugger />
+
+          {/* Adaptive Demo Controls - Developer-only UI simulation panel */}
+          <AdaptiveDemoControls />
+
+          {/* Adaptive Decision Panel - Shows current model decision */}
+          <AdaptiveDecisionPanel />
 
       <main>
         <Routes>

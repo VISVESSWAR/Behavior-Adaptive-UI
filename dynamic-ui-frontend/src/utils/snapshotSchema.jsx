@@ -218,6 +218,7 @@ export class TransitionBuilder {
           timestamp_t1: snapshot_t1.timestamp,
           session_id: snapshot_t.sessionId,
           flow_id: snapshot_t.flowId,
+          experimentMode: snapshot_t.experimentMode || "unknown",
         },
       };
 

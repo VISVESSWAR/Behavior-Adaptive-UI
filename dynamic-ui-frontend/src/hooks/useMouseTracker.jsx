@@ -4,6 +4,9 @@ import { logEvent } from "../logging/eventLogger.jsx";
 import useIdleTimer from "./useIdleTimer.jsx";
 import useScrollDepth from "./useScrollDepth.jsx";
 
+// Sliding window size: 10 seconds
+const WINDOW_MS = 10000;
+
 export default function useMouseTracker(flowId, stepId) {
   const startTime = useRef(performance.now());
   const prev = useRef(null);
@@ -41,9 +44,11 @@ export default function useMouseTracker(flowId, stepId) {
 
   function stats(arr) {
     if (!arr.length) return { mean: 0, std: 0 };
-    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    // Extract values from timestamped samples
+    const values = arr.map(x => x.value);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const std = Math.sqrt(
-      arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length
+      values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length
     );
     return { mean, std };
   }
@@ -63,26 +68,50 @@ export default function useMouseTracker(flowId, stepId) {
           const dist = euclideanDistance(prev.current, current);
           vel = dist / dt;
 
-          accel = accum.current.velocities.length
-            ? (vel - accum.current.velocities.at(-1)) / dt
+          // Get the last velocity value for acceleration calculation
+          const lastVel = accum.current.velocities.length
+            ? accum.current.velocities.at(-1).value
             : 0;
+          accel = (vel - lastVel) / dt;
 
-          jerk = accum.current.accelerations.length
-            ? (accel - accum.current.accelerations.at(-1)) / dt
+          // Get the last acceleration value for jerk calculation
+          const lastAccel = accum.current.accelerations.length
+            ? accum.current.accelerations.at(-1).value
             : 0;
+          jerk = (accel - lastAccel) / dt;
 
           accum.current.totalDistance += dist;
-          accum.current.velocities.push(vel);
-          accum.current.accelerations.push(accel);
-          accum.current.jerks.push(jerk);
-          accum.current.actionTimes.push(dt);
+          
+          // Store samples with timestamps instead of raw values
+          accum.current.velocities.push({ value: vel, t: now });
+          accum.current.accelerations.push({ value: accel, t: now });
+          accum.current.jerks.push({ value: jerk, t: now });
+          accum.current.actionTimes.push({ value: dt, t: now });
           accum.current.numActions += 1;
 
           if (prevPrev.current) {
-            accum.current.curvatures.push(
-              curvature(prevPrev.current, prev.current, current)
-            );
+            accum.current.curvatures.push({
+              value: curvature(prevPrev.current, prev.current, current),
+              t: now,
+            });
           }
+
+          // Remove samples older than WINDOW_MS from all arrays
+          accum.current.velocities = accum.current.velocities.filter(
+            (x) => now - x.t <= WINDOW_MS
+          );
+          accum.current.accelerations = accum.current.accelerations.filter(
+            (x) => now - x.t <= WINDOW_MS
+          );
+          accum.current.jerks = accum.current.jerks.filter(
+            (x) => now - x.t <= WINDOW_MS
+          );
+          accum.current.curvatures = accum.current.curvatures.filter(
+            (x) => now - x.t <= WINDOW_MS
+          );
+          accum.current.actionTimes = accum.current.actionTimes.filter(
+            (x) => now - x.t <= WINDOW_MS
+          );
         }
       }
 
@@ -100,6 +129,8 @@ export default function useMouseTracker(flowId, stepId) {
       const velStats = stats(accum.current.velocities);
       const accStats = stats(accum.current.accelerations);
       const curStats = stats(accum.current.curvatures);
+      const jerkValues = accum.current.jerks.map((x) => x.value);
+      const actionTimeValues = accum.current.actionTimes.map((x) => x.value);
 
       setMetrics((m) => ({
         ...m,
@@ -107,8 +138,8 @@ export default function useMouseTracker(flowId, stepId) {
         s_total_distance: accum.current.totalDistance,
         s_num_actions: accum.current.numActions,
         s_mean_time_per_action:
-          accum.current.actionTimes.reduce((a, b) => a + b, 0) /
-          (accum.current.actionTimes.length || 1),
+          actionTimeValues.reduce((a, b) => a + b, 0) /
+          (actionTimeValues.length || 1),
         s_vel_mean: velStats.mean,
         s_vel_std: velStats.std,
         s_accel_mean: accStats.mean,
@@ -116,8 +147,7 @@ export default function useMouseTracker(flowId, stepId) {
         s_curve_mean: curStats.mean,
         s_curve_std: curStats.std,
         s_jerk_mean:
-          accum.current.jerks.reduce((a, b) => a + b, 0) /
-          (accum.current.jerks.length || 1),
+          jerkValues.reduce((a, b) => a + b, 0) / (jerkValues.length || 1),
       }));
     }
 

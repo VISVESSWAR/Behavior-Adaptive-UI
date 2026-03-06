@@ -341,6 +341,10 @@ class IndexedDBManager {
       "s_persona_novice_old",
       "s_persona_intermediate",
       "s_persona_expert",
+      "s_ui_button_level",
+      "s_ui_text_level",
+      "s_ui_spacing_level",
+      "s_ui_font_level",
     ];
 
     const nextStateColumns = stateColumns.map((col) => `next_${col}`);
@@ -348,60 +352,75 @@ class IndexedDBManager {
       ...stateColumns,
       "action",
       "experimentMode",
-      "reward",
+      "reward_behavior",
+      "reward_task",
+      "reward_combined",
       ...nextStateColumns,
       "done",
     ];
 
     // CSV rows
-    // ⚠️ CRITICAL: s and s_prime are ARRAYS not objects
-    // Index by position: s[0], s[1], etc.
+    // ⚠️ CRITICAL: s and s_prime are OBJECTS with properties, not arrays
+    // Extract values by property name
     const rows = transitions.map((t) => {
       if (!t.s || !t.s_prime) {
-        console.warn("[IndexedDB] Skipping transition with missing state vectors");
+        console.warn("[IndexedDB] Skipping transition with missing state vectors", t);
         return null;
       }
 
       try {
-        // Parse s if it's a string (JSON stringified), otherwise use as-is
-        let sArray, sPrimeArray;
+        // Handle s and s_prime as objects (from buildStateVector)
+        let sObj = t.s;
+        let sPrimeObj = t.s_prime;
         
-        try {
-          sArray = typeof t.s === "string" ? JSON.parse(t.s) : t.s;
-        } catch (e) {
-          console.error("[IndexedDB] Failed to parse t.s:", t.s, e);
-          sArray = [];
+        // If they're JSON strings, parse them
+        if (typeof sObj === "string") {
+          sObj = JSON.parse(sObj);
         }
-        
-        try {
-          sPrimeArray = typeof t.s_prime === "string" ? JSON.parse(t.s_prime) : t.s_prime;
-        } catch (e) {
-          console.error("[IndexedDB] Failed to parse t.s_prime:", t.s_prime, e);
-          sPrimeArray = [];
+        if (typeof sPrimeObj === "string") {
+          sPrimeObj = JSON.parse(sPrimeObj);
         }
 
-        // Ensure both are arrays
-        if (!Array.isArray(sArray)) {
-          console.warn("[IndexedDB] After parsing, sArray is not an array:", sArray);
-          sArray = [];
+        // Ensure both are objects
+        if (typeof sObj !== "object" || sObj === null) {
+          console.warn("[IndexedDB] After parsing, sObj is not an object:", sObj);
+          return null;
         }
-        if (!Array.isArray(sPrimeArray)) {
-          console.warn("[IndexedDB] After parsing, sPrimeArray is not an array:", sPrimeArray);
-          sPrimeArray = [];
+        if (typeof sPrimeObj !== "object" || sPrimeObj === null) {
+          console.warn("[IndexedDB] After parsing, sPrimeObj is not an object:", sPrimeObj);
+          return null;
         }
 
-        // s is an array of 15 values
-        const stateValues = sArray.slice(0, 15);
+        // Extract state values in order by property name
+        const stateValues = stateColumns.map((col) => {
+          const val = sObj[col] ?? 0;
+          return typeof val === "number" ? val.toFixed(6) : val;
+        });
         
-        // s_prime is an array of 15 values
-        const nextStateValues = sPrimeArray.slice(0, 15);
+        // Extract next state values in order by property name
+        const nextStateValues = stateColumns.map((col) => {
+          const val = sPrimeObj[col] ?? 0;
+          return typeof val === "number" ? val.toFixed(6) : val;
+        });
         
         // Extract experiment mode from transition metadata
         const experimentMode = t.metadata?.experimentMode || "unknown";
+        
+        // Extract reward components (handle both old single reward and new multipart rewards)
+        const r_behavior = t.r_behavior ?? t.r ?? 0;
+        const r_task = t.r_task ?? 0;
+        const r_combined = t.r ?? 0;
 
-        return [...stateValues, t.a, experimentMode, t.r, ...nextStateValues, t.done ? 1 : 0]
-          .map((v) => (typeof v === "number" ? v.toFixed(6) : v))
-          .join(",");
+        return [
+          ...stateValues,
+          t.a,
+          experimentMode,
+          typeof r_behavior === "number" ? r_behavior.toFixed(6) : r_behavior,
+          typeof r_task === "number" ? r_task.toFixed(6) : r_task,
+          typeof r_combined === "number" ? r_combined.toFixed(6) : r_combined,
+          ...nextStateValues,
+          t.done ? 1 : 0
+        ].join(",");
       } catch (rowError) {
         console.error("[IndexedDB] Error processing row:", rowError, t);
         return null;

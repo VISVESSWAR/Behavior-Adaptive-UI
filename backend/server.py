@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 MODEL_PATH = "models/ddqn_adaptive_ui_full_checkpoint.pth"
 STATE_COLS_PATH = "models/dqn_state_cols_v2.json"
 # //C:\Users\amvis\Documents\bda\copyforzip\copyforzip\backend\models\adaptive_ui_policy_model2.pkl
-ADAPTIVE_MODEL_PATH = "models/adaptive_ui_policy_model2.pkl"
-FEATURE_COLUMNS_PATH = "models/feature_columns2.pkl"
+ADAPTIVE_MODEL_PATH = "models/adaptive_ui_policy_model_normalized_upd.pkl"
+FEATURE_COLUMNS_PATH = "models/feature_columns_normalized_upd.pkl"
 
 USABILITY_METRICS_LOG = "logs/usability_metrics.json"
 
@@ -305,10 +305,18 @@ def adaptive_action():
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-        # ========== PREDICT ACTION ==========
-        logger.info("🤖 Running RandomForest prediction...")
-        action = int(adaptive_model.predict(df)[0])
-        logger.info(f"  Predicted action: {action}")
+        # ========== PREDICT ACTION WITH PROBABILITY SAMPLING ==========
+        logger.info("🤖 Running RandomForest prediction with probability sampling...")
+        
+        # Get class probabilities
+        probs = adaptive_model.predict_proba(df)[0]
+        logger.info(f"Action probabilities: {probs}")
+        
+        # Sample action proportionally to probabilities
+        action = int(np.random.choice(len(probs), p=probs))
+        confidence = float(np.max(probs))
+        
+        logger.info(f"  Sampled action: {action} (confidence: {confidence:.4f})")
 
         # ========== VALIDATE ACTION ==========
         if action not in ACTION_NAMES:
@@ -316,10 +324,11 @@ def adaptive_action():
             action = 0
 
         result = {
-            "action": action,
+            "action": int(action),
             "action_name": ACTION_NAMES.get(action),
+            "confidence": confidence,
             "feature_count": EXPECTED_FEATURE_COUNT,
-            "reason": "RandomForest model prediction"
+            "reason": "RandomForest probability sampling"
         }
         
         logger.info(f"\n✅ PREDICTION SUCCESSFUL")
