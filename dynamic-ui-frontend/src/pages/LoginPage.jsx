@@ -44,6 +44,13 @@ export default function LoginPage() {
 
       const res = await post("/auth/login", { email, password });
       localStorage.setItem("token", res.token);
+      // generate app_id for session if not already present
+      const existingAppId = localStorage.getItem("app_id");
+      if (!existingAppId) {
+        const newAppId = `app_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+        localStorage.setItem("app_id", newAppId);
+        console.log("[LoginPage] Assigned new app_id", newAppId);
+      }
 
       // Dispatch custom event to update navbar immediately
       window.dispatchEvent(new Event("auth-change"));

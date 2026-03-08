@@ -218,6 +218,49 @@ export function AdaptationDebugger() {
           </div>
         )}
 
+        {/* Data controls: export and clear */}
+        <div className="mb-2 border-b border-gray-500 pb-2 text-xs">
+          <div className="font-semibold mb-1">🗄️ Data Tools:</div>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={async () => {
+                if (window.__metricsCollector) {
+                  const csv = await window.__metricsCollector.dbManager.exportAllAsCSV();
+                  if (csv) {
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "transitions.csv";
+                    a.click();
+                  } else {
+                    alert("No transitions to export");
+                  }
+                }
+              }}
+              className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs"
+              title="Download all stored transitions as CSV"
+            >
+              📥 Export CSV
+            </button>
+            <button
+              onClick={async () => {
+                if (
+                  window.confirm(
+                    "Clear all stored transitions? This cannot be undone."
+                  )
+                ) {
+                  await window.__metricsCollector.dbManager.clearAllTransitions();
+                  alert("All transitions cleared");
+                }
+              }}
+              className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-xs"
+              title="Remove all transitions from IndexedDB"
+            >
+              🗑️ Clear Logs
+            </button>
+          </div>
+        </div>
+
         {/* UI Config State */}
         <div className="text-xs">
           <div className="font-semibold mb-1"> UI Config:</div>

@@ -3,7 +3,7 @@
 import { ACTION_SPACE } from "../adaptation/actionSpace.jsx";
 import { SESSION_ID } from "../logging/session.jsx";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5001";
 const CACHE_DURATION = 500; // Cache DQN predictions for 500ms to avoid too many requests
 
 // ============================================================

@@ -5,12 +5,14 @@ import joblib
 import pandas as pd
 from datetime import datetime
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import logging
 from pathlib import Path
 
 from models.q_network import QNetwork
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # ---------------- LOGGING ----------------
 logging.basicConfig(level=logging.INFO)
@@ -172,17 +174,24 @@ def adaptive_action():
 
         if len(state) < EXPECTED_FEATURE_COUNT:
             raise ValueError(
-                f"Expected {EXPECTED_FEATURE_COUNT} features but received {len(state)}"
+                f"Expected at least {EXPECTED_FEATURE_COUNT} features but received {len(state)}"
             )
 
-        state = state[:EXPECTED_FEATURE_COUNT]
+        # Separate state handling: RF uses truncated state (15), RL uses full state (19)
+        state_for_rf = state[:EXPECTED_FEATURE_COUNT]
+        state_for_rl = state[:STATE_SIZE] if len(state) >= STATE_SIZE else state
+
+        logger.info(f"STATE_SIZE: {STATE_SIZE}, EXPECTED_FEATURE_COUNT: {EXPECTED_FEATURE_COUNT}")
+        logger.info(f"Original state length: {len(state)}")
+        logger.info(f"RF state length: {len(state_for_rf)}, RL state length: {len(state_for_rl)}")
+        logger.info(f"RL state first 5: {state_for_rl[:5]}")
 
         # ======================================================
-        # CREATE DATAFRAME
+        # CREATE DATAFRAME FOR RF
         # ======================================================
 
         input_data = {
-            EXPECTED_FEATURE_COLUMNS[i]: float(state[i])
+            EXPECTED_FEATURE_COLUMNS[i]: float(state_for_rf[i])
             for i in range(EXPECTED_FEATURE_COUNT)
         }
 
@@ -203,7 +212,7 @@ def adaptive_action():
         # RL PREDICTION
         # ======================================================
 
-        state_tensor = torch.tensor(np.array(state, dtype=np.float32)).unsqueeze(0)
+        state_tensor = torch.tensor(np.array(state_for_rl, dtype=np.float32)).unsqueeze(0)
 
         with torch.no_grad():
             q_values = model(state_tensor)
@@ -242,7 +251,7 @@ def adaptive_action():
 
         log_rl_transition({
             "user_id": user_id,
-            "state": state,
+            "state": state_for_rl,  # Use full state for RL training consistency
             "rf_action": rf_action,
             "rl_action": rl_action,
             "final_action": action,

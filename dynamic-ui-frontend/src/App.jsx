@@ -14,6 +14,7 @@ import AdaptiveDemoControls from "./components/AdaptiveDemoControls.jsx";
 import AdaptiveDecisionPanel from "./components/AdaptiveDecisionPanel.jsx";
 import HelpTooltip from "./components/HelpTooltip.jsx";
 import Navbar from "./components/Navbar.jsx";
+import { useTaskTracking } from "./hooks/useTaskTracking.jsx"; // track page/task changes
 import MetricsCollector from "./utils/metricsCollectorSimplified.jsx";
 import { setupExperimentControl } from "./utils/experimentControl.jsx";
 
@@ -52,6 +53,7 @@ function AuthRoute({ children }) {
 function AppContent() {
   const metricsCollectorRef = useRef(null);
   const task = useTask();
+  useTaskTracking(); // update task ids whenever route/path changes
   const { metricsCollectorRef: contextCollectorRef } = useMetricsCollector();
   const [lastDQNAction, setLastDQNAction] = useState(-1); // Track DQN action for UI reactions
 

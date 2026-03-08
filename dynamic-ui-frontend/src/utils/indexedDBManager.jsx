@@ -349,6 +349,9 @@ class IndexedDBManager {
 
     const nextStateColumns = stateColumns.map((col) => `next_${col}`);
     const header = [
+      "user_id",
+      "app_id",
+      "task_id",
       ...stateColumns,
       "action",
       "experimentMode",
@@ -411,7 +414,17 @@ class IndexedDBManager {
         const r_task = t.r_task ?? 0;
         const r_combined = t.r ?? 0;
 
+        // retrieve metadata values with fallbacks
+        const userId = t.metadata?.userId || localStorage.getItem("user_id") || "unknown";
+        const appId = t.metadata?.appId || localStorage.getItem("app_id") || "unknown";
+        const taskId =
+          t.metadata?.taskId ||
+          `${t.metadata?.flowId || "unknown"}_${t.metadata?.stepId || "unknown"}`;
+
         return [
+          userId,
+          appId,
+          taskId,
           ...stateValues,
           t.a,
           experimentMode,
@@ -429,10 +442,34 @@ class IndexedDBManager {
 
     const csv = [header.join(","), ...rows].join("\n");
 
-    console.log(
-      `[IndexedDB] Exported ${rows.length} transitions as CSV`,
-    );
     return csv;
+  }
+
+  // Clear all stored transitions (useful for resetting training data)
+  async clearAllTransitions() {
+    if (!this.isConnectionValid()) {
+      console.warn("[IndexedDB] Database not initialized or connection closed, attempting reconnection before clear...");
+      try {
+        await this.reconnect();
+      } catch (err) {
+        console.error("[IndexedDB] Failed to reconnect for clear operation:", err);
+        return;
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([this.storeName], "readwrite");
+      const objectStore = transaction.objectStore(this.storeName);
+      const request = objectStore.clear();
+      request.onsuccess = () => {
+        console.log("[IndexedDB] All transitions cleared");
+        resolve();
+      };
+      request.onerror = (e) => {
+        console.error("[IndexedDB] Error clearing transitions:", e);
+        reject(e);
+      };
+    });
   }
 
   // Export all transitions as JSON with connection validation

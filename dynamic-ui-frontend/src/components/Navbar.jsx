@@ -30,6 +30,8 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user_id"); // Reset user_id for new session
+    localStorage.removeItem("app_id"); // Reset app_id when logging out
     window.dispatchEvent(new Event("auth-change"));
     navigate("/");
   };

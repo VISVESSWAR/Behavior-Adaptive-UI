@@ -286,6 +286,16 @@ export class MetricsCollector {
     this.currentTaskData = taskData;
   }
 
+  // Update the identifiers used when building snapshots and sending to the DQN server
+  // Called by useTaskTracking hook whenever route changes
+  updateTaskIds(flowId, stepId) {
+    this.flowId = flowId;
+    this.stepId = stepId;
+    console.log(
+      `[MetricsCollector] Updated task identifiers: flowId=${flowId}, stepId=${stepId}`,
+    );
+  }
+
   // Calculate task reward: +0.6 (complete), -0.4 (timeout), -0.02 × pathLength; clipped to [-1, 1]
   // ALIGNED WITH: taskReward.jsx for consistency
   calculateTaskReward(taskData) {
@@ -815,8 +825,10 @@ export class MetricsCollector {
           metadata: {
             timestamp: curr.timestamp,
             sessionId: curr.sessionId,
+            appId: localStorage.getItem("app_id") || "unknown", // track app session
             flowId: curr.flowId,
             stepId: curr.stepId,
+            taskId: `${curr.flowId}_${curr.stepId}`,
             experimentMode: curr.experimentMode || getExperimentMode(),
             explorationData: prev.explorationData || null,
           },
