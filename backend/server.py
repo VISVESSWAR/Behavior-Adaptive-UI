@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import json
 import joblib
 import pandas as pd
@@ -7,8 +6,6 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 import logging
 from pathlib import Path
-
-from models.q_network import QNetwork
 
 app = Flask(__name__)
 
@@ -23,42 +20,11 @@ logger = logging.getLogger(__name__)
 # PATHS
 # -----------------------------------------------------
 
-RL_MODEL_PATH = "models/ddqn_adaptive_ui_full_checkpoint.pth"
-STATE_COLS_PATH = "models/dqn_state_cols_v2.json"
-
 ADAPTIVE_MODEL_PATH = "models/adaptive_ui_policy_model_normalized_upd.pkl"
 FEATURE_COLUMNS_PATH = "models/feature_columns_normalized_upd.pkl"
 
 USABILITY_LOG = "logs/usability_metrics.json"
 RL_TRANSITIONS_LOG = "logs/rl_transitions.json"
-
-device = torch.device("cpu")
-
-# -----------------------------------------------------
-# LOAD RL MODEL
-# -----------------------------------------------------
-
-checkpoint = torch.load(RL_MODEL_PATH, map_location=device)
-
-STATE_SIZE = checkpoint["state_dim"]
-ACTION_SIZE = checkpoint["action_dim"]
-
-logger.info(f"RL model state size: {STATE_SIZE}")
-logger.info(f"RL model action size: {ACTION_SIZE}")
-
-rl_model = QNetwork(STATE_SIZE, ACTION_SIZE)
-rl_model.load_state_dict(checkpoint["policy_state_dict"])
-rl_model.eval()
-
-logger.info("RL model loaded successfully")
-
-# -----------------------------------------------------
-# LOAD STATE COLUMN ORDER
-# -----------------------------------------------------
-
-state_cols = json.load(open(STATE_COLS_PATH))["s_cols"]
-
-logger.info(f"Loaded state column order ({len(state_cols)} features)")
 
 # -----------------------------------------------------
 # RANDOM FOREST FEATURE SCHEMA
@@ -95,7 +61,6 @@ try:
 
     logger.info("RandomForest model loaded")
 
-    # Debug validation
     if hasattr(rf_model, "n_features_in_"):
 
         model_features = rf_model.n_features_in_
@@ -164,6 +129,7 @@ def log_usability(data):
         "user_id": data.get("user_id"),
         "session_id": data.get("session_id"),
         "task_id": data.get("task_id"),
+        "task_start_time": data.get("task_start_time"),
         "adaptive_enabled": data.get("adaptive_enabled"),
         "method_used": data.get("method_used"),
         "action": data.get("action"),
@@ -178,10 +144,10 @@ def log_usability(data):
     logger.info(f"Logged UX metrics for user {entry['user_id']}")
 
 # -----------------------------------------------------
-# LOG RL TRANSITION
+# LOG TRANSITION
 # -----------------------------------------------------
 
-def log_rl_transition(data):
+def log_transition(data):
 
     entry = {
         "timestamp": datetime.now().isoformat(),
@@ -190,7 +156,6 @@ def log_rl_transition(data):
         "task_id": data.get("task_id"),
         "state": data.get("state"),
         "rf_action": data.get("rf_action"),
-        "rl_action": data.get("rl_action"),
         "final_action": data.get("final_action"),
         "method_used": data.get("method_used")
     }
@@ -213,6 +178,7 @@ def adaptive_action():
         user_id = data.get("user_id", "anonymous")
         session_id = data.get("session_id")
         task_id = data.get("task_id")
+        task_start_time = data.get("task_start_time")
         adaptive_enabled = data.get("adaptive_enabled", True)
 
         state = data["state"]
@@ -226,7 +192,7 @@ def adaptive_action():
         state = state[:EXPECTED_FEATURE_COUNT]
 
         # -------------------------------------------------
-        # RF PREDICTION
+        # RANDOM FOREST PREDICTION
         # -------------------------------------------------
 
         input_data = {
@@ -242,60 +208,35 @@ def adaptive_action():
         confidence = float(np.max(probs))
 
         # -------------------------------------------------
-        # RL PREDICTION
+        # FINAL POLICY (RF ONLY)
         # -------------------------------------------------
 
-        state_tensor = torch.tensor(np.array(state, dtype=np.float32)).unsqueeze(0)
-
-        with torch.no_grad():
-            q_values = rl_model(state_tensor)
-            rl_action = int(torch.argmax(q_values).item())
+        action = rf_action
+        method_used = "RF_POLICY"
 
         # -------------------------------------------------
-        # HYBRID POLICY
+        # LOG TRANSITION
         # -------------------------------------------------
 
-        epsilon = 0.2
-        rand = np.random.random()
-
-        if rand < epsilon:
-
-            action = np.random.randint(0, ACTION_SIZE)
-            method_used = "EXPLORATION"
-
-        elif confidence < 0.4:
-
-            action = rl_action
-            method_used = "RL_POLICY"
-
-        else:
-
-            action = rf_action
-            method_used = "RF_POLICY"
-
-        # -------------------------------------------------
-        # LOG RL TRANSITION
-        # -------------------------------------------------
-
-        log_rl_transition({
+        log_transition({
             "user_id": user_id,
             "session_id": session_id,
             "task_id": task_id,
             "state": state,
             "rf_action": rf_action,
-            "rl_action": rl_action,
             "final_action": action,
             "method_used": method_used
         })
 
         # -------------------------------------------------
-        # LOG UX METRICS
+        # LOG USABILITY METRICS
         # -------------------------------------------------
 
         log_usability({
             "user_id": user_id,
             "session_id": session_id,
             "task_id": task_id,
+            "task_start_time": task_start_time,
             "adaptive_enabled": adaptive_enabled,
             "method_used": method_used,
             "action": action,
@@ -314,7 +255,6 @@ def adaptive_action():
             "action_name": ACTION_NAMES.get(action),
             "method_used": method_used,
             "rf_action": rf_action,
-            "rl_action": rl_action,
             "confidence": confidence
         })
 
@@ -337,7 +277,6 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "rl_model_loaded": True,
         "rf_model_loaded": rf_model is not None
     })
 

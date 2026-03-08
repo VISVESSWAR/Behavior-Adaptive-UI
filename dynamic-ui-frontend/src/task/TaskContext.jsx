@@ -24,14 +24,16 @@ export function TaskProvider({ children }) {
   // Start page-level task with unique task_id (one attempt per page)
   const startPageTask = (pageName) => {
     const newTaskId = generateTaskId(pageName);
+    const startTime = Date.now();
     setTaskId(newTaskId);
+    setTaskStartTime(startTime);
     localStorage.setItem("current_task_id", newTaskId);
-    setTaskStartTime(Date.now());
+    localStorage.setItem("task_start_time", startTime.toString());
     setCompleted(false);
     setFailed(false);
     setPathSequence([]);
     setAttempts(0);
-    console.log(`[TaskContext] Started page task: ${newTaskId}`);
+    console.log(`[TaskContext] Started page task: ${newTaskId} at ${startTime}`);
   };
 
   // Get current task_id
@@ -41,15 +43,17 @@ export function TaskProvider({ children }) {
 
   // Start task with id and time limit (in milliseconds) - legacy compatibility
   const startTask = (id, limit) => {
+    const startTime = Date.now();
     setTaskId(id);
     localStorage.setItem("current_task_id", id);
-    setTaskStartTime(Date.now());
+    localStorage.setItem("task_start_time", startTime.toString());
+    setTaskStartTime(startTime);
     setTimeLimit(limit);
     setCompleted(false);
     setFailed(false);
     setPathSequence([]);
     setAttempts(0);
-    console.log(`[TaskContext] Started task: ${id}, limit: ${limit}ms`);
+    console.log(`[TaskContext] Started task: ${id}, limit: ${limit}ms, startTime: ${startTime}`);
   };
 
   // Mark task complete
@@ -85,7 +89,8 @@ export function TaskProvider({ children }) {
     setPathSequence([]);
     setAttempts(0);
     localStorage.removeItem("current_task_id");
-    console.log("[TaskContext] Task reset");
+    localStorage.removeItem("task_start_time");
+    console.log("[TaskContext] Task reset and cleared from localStorage");
   };
 
   const value = {

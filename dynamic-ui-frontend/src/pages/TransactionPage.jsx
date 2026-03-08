@@ -52,12 +52,12 @@ export default function TransactionPage() {
     task.startPageTask("transaction");
 
     // Get pathType from metrics collector if available, otherwise assign random one
-    setPathType(null);
+    // setPathType(null);  — REMOVED: Don't reset pathType on every render
     // console.log("TRANSACTION PATH:", assignedPathType);
 
     // Fetch peers from API
     fetchPeers();
-  }, [task]);
+  }, []);  // Empty dependency array — only runs on mount
 
   // Fetch peers from backend
   const fetchPeers = async () => {

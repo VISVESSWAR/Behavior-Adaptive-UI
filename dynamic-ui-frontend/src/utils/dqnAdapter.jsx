@@ -158,6 +158,7 @@ export async function getDQNAction(stateVector, metrics, flowId, stepId) {
       user_id: localStorage.getItem("user_id") || "user_demo",
       session_id: SESSION_ID,
       task_id: buildTaskId(flowId, stepId),
+      task_start_time: localStorage.getItem("task_start_time") || "unknown",
 
       adaptive_enabled:
         localStorage.getItem("adaptive_enabled") === "true",
@@ -171,7 +172,7 @@ export async function getDQNAction(stateVector, metrics, flowId, stepId) {
       idle_time: metrics?.idle_time ?? 0,
     };
 
-    const res = await fetch(`${API_BASE}/adaptive-action`, {
+    const res = await fetch(`${API_BASE}/api/adaptive-action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
