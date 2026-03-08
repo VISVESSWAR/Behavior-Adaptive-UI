@@ -10,17 +10,26 @@ const TIMEOUT_MS = 1200;   // prevent UI lag
 const FALLBACK_ACTION = 0; // restore default layout
 
 router.post("/adaptive-action", async (req, res) => {
-  const { state } = req.body;
+  const { state, user_id, task_id, task_start_time, session_id } = req.body;
     console.log("Received state vector for DQN prediction:", state);
+    console.log("Received metadata - user_id:", user_id, "task_id:", task_id, "task_start_time:", task_start_time);
   // Basic validation
   if (!state || !Array.isArray(state)) {
     return res.status(400).json({ error: "State vector required" });
   }
 
   try {
+    const mlPayload = {
+      state,
+      user_id: user_id || "anonymous",
+      task_id: task_id || null,
+      task_start_time: task_start_time || null,
+      session_id: session_id || null
+    };
+    
     const mlResponse = await axios.post(
       ML_SERVER,
-      { state },
+      mlPayload,
       { timeout: TIMEOUT_MS }
     );
     console.log("ML server response:", mlResponse.data);    
