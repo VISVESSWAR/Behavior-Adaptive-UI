@@ -48,7 +48,8 @@ export default function TransactionPage() {
       timestamp: new Date().toISOString(),
     });
 
-    task.startTask("transaction_task", 60000); // 60 second limit
+    // Start transaction task - generates unique task_id per attempt
+    task.startPageTask("transaction");
 
     // Get pathType from metrics collector if available, otherwise assign random one
     setPathType(null);
@@ -56,7 +57,7 @@ export default function TransactionPage() {
 
     // Fetch peers from API
     fetchPeers();
-  }, []);
+  }, [task]);
 
   // Fetch peers from backend
   const fetchPeers = async () => {

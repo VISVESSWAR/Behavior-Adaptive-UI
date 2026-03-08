@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import HelpBar from "../components/HelpBar.jsx";
+import { useTask } from "../task/TaskContext.jsx";
 import { logEvent } from "../logging/eventLogger.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
@@ -12,6 +13,7 @@ import "../styles.css";
 const FLOW_ID = "recovery";
 
 export default function RecoveryPage() {
+  const task = useTask();
   const [email, setEmail] = useState("");
   const [step, setStep] = useState("email"); // email | method
   const [selectedMethod, setSelectedMethod] = useState(null);
@@ -23,6 +25,18 @@ export default function RecoveryPage() {
   });
 
   const navigate = useNavigate();
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "recovery",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("recovery");
+  }, [task]);
 
   async function validateEmail() {
     if (!email.trim()) {

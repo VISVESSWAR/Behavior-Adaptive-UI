@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import HelpBar from "../components/HelpBar.jsx";
+import { useTask } from "../task/TaskContext.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
@@ -19,11 +20,24 @@ export default function OtpVerifyPage() {
 
 function OtpVerifyContent() {
   const navigate = useNavigate();
+  const task = useTask();
   const email = localStorage.getItem("email");
 
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "otp_verify",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("otp_verify");
+  }, [task]);
 
   /* Countdown timer */
   useEffect(() => {

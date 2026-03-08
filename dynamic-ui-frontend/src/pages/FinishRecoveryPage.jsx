@@ -1,12 +1,26 @@
 import { post } from "../api.jsx";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTask } from "../task/TaskContext.jsx";
+import { logEvent } from "../logging/eventLogger.jsx";
 import "../styles.css";
 import HelpBar from "../components/HelpBar.jsx";
 
 export default function FinishRecoveryPage() {
+  const task = useTask();
   const [status, setStatus] = useState("Recovering...");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "finish_recovery",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("finish_recovery");
+  }, [task]);
 
   useEffect(() => {
     async function finish() {

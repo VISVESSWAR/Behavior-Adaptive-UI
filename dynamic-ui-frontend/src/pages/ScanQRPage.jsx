@@ -3,14 +3,29 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import HelpBar from "../components/HelpBar.jsx";
+import { useTask } from "../task/TaskContext.jsx";
+import { logEvent } from "../logging/eventLogger.jsx";
 import "../styles.css";
 
 export default function ScanQRPage() {
+  const task = useTask();
   const [shares, setShares] = useState([]);
   const navigate = useNavigate();
 
   const email = localStorage.getItem("email");
   const threshold = Number(localStorage.getItem("threshold"));
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "scan_qr",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("scan_qr");
+  }, [task]);
 
   useEffect(() => {
     const scanner = new Html5QrcodeScanner(

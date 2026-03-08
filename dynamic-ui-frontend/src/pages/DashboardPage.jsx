@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useMetricsCollector } from "../context/MetricsContext.jsx";
+import { useTask } from "../task/TaskContext.jsx";
+import { logEvent } from "../logging/eventLogger.jsx";
 import HelpBar from "../components/HelpBar.jsx";
 import IndexedDBManager from "../utils/indexedDBManager.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
@@ -14,11 +16,28 @@ function fmt(v, d = 2) {
 export default function DashboardPage() {
   // Get MetricsCollector instance from context (READ ONLY - no tracking)
   const { metricsCollectorRef } = useMetricsCollector();
+  const task = useTask();
 
   // State for dashboard display
   const [snapshotCount, setSnapshotCount] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
   const [currentMetrics, setCurrentMetrics] = useState({});
+  const [taskStarted, setTaskStarted] = useState(false);
+
+  // Start task once on mount
+  useEffect(() => {
+    if (!taskStarted) {
+      logEvent({
+        type: "page_view",
+        flowId: "dashboard",
+        stepId: "dashboard",
+        timestamp: new Date().toISOString(),
+      });
+      
+      task.startPageTask("dashboard");
+      setTaskStarted(true);
+    }
+  }, []);
 
   // Fetch and subscribe to metrics from global collector
   useEffect(() => {

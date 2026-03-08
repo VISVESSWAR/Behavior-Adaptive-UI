@@ -29,9 +29,9 @@ export default function LoginPage() {
       timestamp: new Date().toISOString(),
     });
 
-    // Start login task with 45 second time limit
-    task.startTask("login_task", 45000);
-  }, []);
+    // Start login task - generates unique task_id per attempt
+    task.startPageTask("login");
+  }, [task]);
 
   async function login() {
     try {

@@ -1,11 +1,26 @@
 import { useEffect, useState } from "react";
+import { useTask } from "../task/TaskContext.jsx";
+import { logEvent } from "../logging/eventLogger.jsx";
 import "../styles.css";
 import HelpBar from "../components/HelpBar.jsx";
 
 export default function TapWaitPage() {
+  const task = useTask();
   const [count, setCount] = useState(0);
   const threshold = Number(localStorage.getItem("threshold"));
   const email = localStorage.getItem("email");
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "tap_wait",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("tap_wait");
+  }, [task]);
 
   useEffect(() => {
     const interval = setInterval(async () => {

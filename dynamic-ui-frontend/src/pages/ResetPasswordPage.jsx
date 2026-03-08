@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,16 @@ export default function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "reset_password",
+      timestamp: new Date().toISOString(),
+    });
+  }, []);
 
   async function resetPassword() {
     if (password !== confirm) {

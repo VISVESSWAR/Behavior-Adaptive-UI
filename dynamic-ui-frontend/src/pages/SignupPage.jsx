@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [threshold, setThreshold] = useState(2);
   const [peers, setPeers] = useState(["", "", ""]);
 
+  // Import useTask hook at top with other imports, then use in first useEffect
   // Metrics collection
   useEffect(() => {
     logEvent({

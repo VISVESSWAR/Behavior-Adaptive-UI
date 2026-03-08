@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { post } from "../api.jsx";
 import { useNavigate } from "react-router-dom";
 import HelpBar from "../components/HelpBar.jsx";
+import { useTask } from "../task/TaskContext.jsx";
 import AdaptiveInput from "../components/AdaptiveInput.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import { AdaptiveHeading, AdaptiveParagraph } from "../components/AdaptiveText.jsx";
@@ -11,11 +12,24 @@ import { logEvent } from "../logging/eventLogger.jsx";
 
 export default function OtpRecoverPage() {
   const navigate = useNavigate();
+  const task = useTask();
   const email = localStorage.getItem("email");
 
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+
+  // Start task on mount
+  useEffect(() => {
+    logEvent({
+      type: "page_view",
+      flowId: "recovery",
+      stepId: "otp_recover",
+      timestamp: new Date().toISOString(),
+    });
+    
+    task.startPageTask("otp_recover");
+  }, [task]);
 
   /* Countdown timer */
   useEffect(() => {

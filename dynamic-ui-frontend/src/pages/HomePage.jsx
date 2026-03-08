@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { logEvent } from "../logging/eventLogger.jsx";
+import { useTask } from "../task/TaskContext.jsx";
 import { get } from "../api.jsx";
 import AdaptiveButton from "../components/AdaptiveButton.jsx";
 import HelpBar from "../components/HelpBar.jsx";
@@ -10,16 +11,33 @@ const FLOW_ID = "dashboard";
 const STEP_ID = "home";
 
 export default function HomePage() {
+  const task = useTask();
   const [view, setView] = useState("profile");
   const [userProfile, setUserProfile] = useState(null);
   const [qrList, setQrList] = useState([]);
   const [peers, setPeers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [taskStarted, setTaskStarted] = useState(false);
+
+  // Start task once on mount
+  useEffect(() => {
+    if (!taskStarted) {
+      logEvent({
+        type: "page_view",
+        flowId: "dashboard",
+        stepId: "home",
+        timestamp: new Date().toISOString(),
+      });
+      
+      task.startPageTask("home");
+      setTaskStarted(true);
+    }
+  }, []);
 
   useEffect(() => {
     logEvent({
-      type: "page_view",
+      type: "view_changed",
       flowId: FLOW_ID,
       stepId: STEP_ID,
       view,
