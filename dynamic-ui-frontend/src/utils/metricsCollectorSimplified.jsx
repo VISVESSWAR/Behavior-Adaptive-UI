@@ -8,6 +8,7 @@ import {
   getDQNAction,
   decideFinalAction,
   getExperimentMode,
+  computeUXMetrics,
 } from "./dqnAdapter.jsx";
 import EpsilonGreedyExplorer from "./epsilonGreedy.jsx";
 import { getCooldownManager } from "../adaptation/personaActionMapper.jsx";
@@ -264,6 +265,14 @@ export class MetricsCollector {
   // Update current metrics (does not create snapshot)
   updateMetrics(metrics) {
     this.windowMetrics = metrics;
+    console.log("[MetricsCollector] windowMetrics updated:", {
+      s_num_clicks: metrics?.s_num_clicks,
+      s_num_misclicks: metrics?.s_num_misclicks,
+      s_session_duration: metrics?.s_session_duration,
+      s_idle_time: metrics?.s_idle_time,
+      s_total_distance: metrics?.s_total_distance,
+      s_num_actions: metrics?.s_num_actions,
+    });
   }
 
   // Called when UI action is applied
@@ -494,7 +503,16 @@ export class MetricsCollector {
           this.currentUIState,
         );
         if (stateVector) {
+          console.log("[MetricsCollector] Before computeUXMetrics - windowMetrics:", {
+            s_num_clicks: this.windowMetrics?.s_num_clicks,
+            s_num_misclicks: this.windowMetrics?.s_num_misclicks,
+            s_session_duration: this.windowMetrics?.s_session_duration,
+            s_idle_time: this.windowMetrics?.s_idle_time,
+          });
+
           const uxMetrics = computeUXMetrics(this.windowMetrics);
+
+          console.log("[MetricsCollector] After computeUXMetrics - uxMetrics:", uxMetrics);
 
           dqnAction = await getDQNAction(stateVector, uxMetrics, this.flowId, this.stepId);
           this.currentDQNAction = dqnAction;
@@ -1209,28 +1227,7 @@ export class MetricsCollector {
   }
 }
 
-export function computeUXMetrics(metrics) {
-  if (!metrics) {
-    return {
-      misclick_rate: 0,
-      task_completion_time: 0,
-      total_clicks: 0,
-      idle_time: 0,
-    };
-  }
-
-  const clicks = metrics.s_num_clicks ?? 0;
-  const wrongClicks = metrics.wrong_clicks ?? 0;
-
-  const misclick_rate = clicks > 0 ? wrongClicks / clicks : 0;
-
-  return {
-    misclick_rate,
-    task_completion_time: metrics.taskDuration ?? 0,
-    total_clicks: clicks,
-    idle_time: metrics.idle_time ?? 0,
-  };
-}
 // INTEGRATION: new MetricsCollector("session_123", "transaction", "confirm"); updateMetrics/Persona via useEffect hooks; collectSnapshot every 10s; export CSV on flow complete
+// ⚠️ CRITICAL: computeUXMetrics is now UNIFIED in dqnAdapter.jsx - NO DUPLICATE
 
 export default MetricsCollector;

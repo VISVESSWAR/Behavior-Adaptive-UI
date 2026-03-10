@@ -113,9 +113,11 @@ export function setLastAdaptiveResponse(response) {
 }
 
 // Compute UX metrics from raw tracking data
+// Maps s_* fields from windowMetrics to user-facing UX metrics
 // Handles division by zero and missing fields safely
 export function computeUXMetrics(metrics) {
   if (!metrics) {
+    console.debug("[computeUXMetrics] No metrics provided, returning zero defaults");
     return {
       misclick_rate: 0,
       task_completion_time: 0,
@@ -124,17 +126,29 @@ export function computeUXMetrics(metrics) {
     };
   }
 
-  // Safe division: avoid division by zero
-  const totalClicks = metrics.num_clicks ?? 0;
-  const wrongClicks = metrics.wrong_clicks ?? 0;
-  const misclickRate = totalClicks > 0 ? wrongClicks / totalClicks : 0;
+  console.debug("[computeUXMetrics] Input metrics:", {
+    s_num_clicks: metrics.s_num_clicks,
+    s_num_misclicks: metrics.s_num_misclicks,
+    s_session_duration: metrics.s_session_duration,
+    s_idle_time: metrics.s_idle_time,
+  });
 
-  return {
-    misclick_rate: misclickRate,
-    task_completion_time: metrics.task_completion_time ?? 0,
-    total_clicks: totalClicks,
-    idle_time: metrics.idle_time ?? 0,
+  // Map s_* fields from windowMetrics to UX metrics
+  const totalClicks = metrics.s_num_clicks ?? 0;
+  const wrongClicks = metrics.s_num_misclicks ?? 0;
+  const misclickRate = totalClicks > 0 ? (wrongClicks / totalClicks) : 0;
+  const taskCompletionTime = metrics.s_session_duration ?? 0;
+  const idleTime = metrics.s_idle_time ?? 0;
+
+  const result = {
+    misclick_rate: misclickRate ?? 0,
+    task_completion_time: taskCompletionTime ?? 0,
+    total_clicks: totalClicks ?? 0,
+    idle_time: idleTime ?? 0,
   };
+
+  console.debug("[computeUXMetrics] Computed metrics:", result);
+  return result;
 }
 
 // Build task ID from flowId and stepId for task-level UX analysis
@@ -144,11 +158,20 @@ export function buildTaskId(flowId, stepId) {
 
 // Fetch action from DQN model backend
 export async function getDQNAction(stateVector, metrics, flowId, stepId) {
-  if (!stateVector) return -1;
+  if (!stateVector) {
+    console.warn("[DQN] No state vector provided");
+    return -1;
+  }
+
+  console.log("[DQN] State vector received:", {
+    length: stateVector?.length,
+    vector: stateVector?.slice(0, 5),  // Show first 5 elements for debugging
+  });
 
   // Rate-limit DQN calls to avoid API flooding
   const now = Date.now();
   if (now - lastPredictionTime < CACHE_DURATION) {
+    console.debug("[DQN] Using cached action (rate-limited):", lastAction);
     return lastAction;
   }
 
@@ -172,13 +195,39 @@ export async function getDQNAction(stateVector, metrics, flowId, stepId) {
       idle_time: metrics?.idle_time ?? 0,
     };
 
+    console.log("[DQN] ✓ Metrics object type check:", {
+      metricsProvided: !!metrics,
+      metricsType: typeof metrics,
+      metricKeys: metrics ? Object.keys(metrics) : null,
+    });
+
+    console.log("[DQN] ✓ Final payload metrics (READY TO SEND):", {
+      misclick_rate: payload.misclick_rate,
+      task_completion_time: payload.task_completion_time,
+      total_clicks: payload.total_clicks,
+      idle_time: payload.idle_time,
+      allMetricsValid: ![
+        payload.misclick_rate,
+        payload.task_completion_time,
+        payload.total_clicks,
+        payload.idle_time,
+      ].includes(null) && ![
+        payload.misclick_rate,
+        payload.task_completion_time,
+        payload.total_clicks,
+        payload.idle_time,
+      ].includes(undefined),
+    });
+
+    console.log("[DQN] Sending full payload to backend:", JSON.stringify(payload, null, 2));
+
     const res = await fetch(`${API_BASE}/api/adaptive-action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      console.warn("[DQN] Backend error:", res.status);
+      console.error("[DQN] Backend error:", res.status, res.statusText);
       return -1;
     }
 
@@ -194,8 +243,8 @@ export async function getDQNAction(stateVector, metrics, flowId, stepId) {
       lastAction,
       "confidence:",
       data.confidence,
-      "state_vector:",
-      stateVector,
+      "state_vector length:",
+      stateVector?.length,
     );
     return lastAction;
   } catch (error) {

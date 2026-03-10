@@ -139,9 +139,31 @@ def log_usability(data):
         "idle_time": data.get("idle_time")
     }
 
+    # ⚠️ CRITICAL: Log what's being written to file
+    logger.info("=" * 80)
+    logger.info("💾 WRITING ENTRY TO usability_metrics.json")
+    logger.info("=" * 80)
+    logger.info(f"✏️  Entry being written:")
+    logger.info(f"  timestamp: {entry['timestamp']}")
+    logger.info(f"  user_id: {entry['user_id']}")
+    logger.info(f"  session_id: {entry['session_id']}")
+    logger.info(f"  task_id: {entry['task_id']}")
+    logger.info(f"  action: {entry['action']}")
+    logger.info(f"  ⭐ misclick_rate: {entry['misclick_rate']} (type: {type(entry['misclick_rate']).__name__})")
+    logger.info(f"  ⭐ task_completion_time: {entry['task_completion_time']} (type: {type(entry['task_completion_time']).__name__})")
+    logger.info(f"  ⭐ total_clicks: {entry['total_clicks']} (type: {type(entry['total_clicks']).__name__})")
+    logger.info(f"  ⭐ idle_time: {entry['idle_time']} (type: {type(entry['idle_time']).__name__})")
+    
+    # Final validation before writing
+    if entry['misclick_rate'] is None or entry['task_completion_time'] is None or entry['total_clicks'] is None or entry['idle_time'] is None:
+        logger.error("🚨 ERROR: One or more UX metrics are NULL before writing to file!")
+    else:
+        logger.info("✅ All UX metrics are valid (non-null)")
+
     append_json(USABILITY_LOG, entry)
 
-    logger.info(f"Logged UX metrics for user {entry['user_id']}")
+    logger.info(f"✓ Successfully logged UX metrics for user {entry['user_id']}")
+    logger.info("=" * 80)
 
 # -----------------------------------------------------
 # LOG TRANSITION
@@ -174,7 +196,9 @@ def adaptive_action():
 
         data = request.json
 
-        logger.info("Adaptive action request received")
+        logger.info("=" * 80)
+        logger.info("🔵 ADAPTIVE ACTION REQUEST RECEIVED",data)
+        logger.info("=" * 80)
 
         user_id = data.get("user_id", "anonymous")
         session_id = data.get("session_id")
@@ -184,8 +208,38 @@ def adaptive_action():
 
         state = data["state"]
 
-        logger.info(f"User: {user_id}")
+        logger.info(f"📍 User: {user_id}")
+        logger.info(f"📊 Session: {session_id}")
+        logger.info(f"📋 Task: {task_id}")
+        logger.info(f"⏱️  Task Start Time: {task_start_time}")
         logger.info(f"State vector length: {len(state)}")
+
+        # ⚠️ CRITICAL: Log incoming metrics EXACTLY AS RECEIVED
+        logger.info("=" * 80)
+        logger.info("📥 INCOMING USABILITY METRICS (FROM FRONTEND)")
+        logger.info("=" * 80)
+        misclick_rate = data.get("misclick_rate")
+        task_completion_time = data.get("task_completion_time")
+        total_clicks = data.get("total_clicks")
+        idle_time = data.get("idle_time")
+        
+        logger.info(f"  misclick_rate: {misclick_rate} (type: {type(misclick_rate).__name__})")
+        logger.info(f"  task_completion_time: {task_completion_time} (type: {type(task_completion_time).__name__})")
+        logger.info(f"  total_clicks: {total_clicks} (type: {type(total_clicks).__name__})")
+        logger.info(f"  idle_time: {idle_time} (type: {type(idle_time).__name__})")
+        
+        # Check if any metrics are null
+        metrics_null_count = sum([
+            misclick_rate is None,
+            task_completion_time is None,
+            total_clicks is None,
+            idle_time is None
+        ])
+        
+        if metrics_null_count > 0:
+            logger.warning(f"⚠️  {metrics_null_count}/4 metrics are NULL! This indicates a frontend computation issue.")
+        else:
+            logger.info("✅ All 4 metrics are valid (non-null)")
 
         if len(state) < EXPECTED_FEATURE_COUNT:
             raise ValueError("Insufficient state features")
@@ -234,7 +288,11 @@ def adaptive_action():
         # LOG USABILITY METRICS
         # -------------------------------------------------
 
-        log_usability({
+        logger.info("=" * 80)
+        logger.info("📤 LOGGING USABILITY METRICS TO usability_metrics.json")
+        logger.info("=" * 80)
+        
+        usability_payload = {
             "user_id": user_id,
             "session_id": session_id,
             "task_id": task_id,
@@ -242,11 +300,14 @@ def adaptive_action():
             "adaptive_enabled": adaptive_enabled,
             "method_used": method_used,
             "action": action,
-            "misclick_rate": data.get("misclick_rate"),
-            "task_completion_time": data.get("task_completion_time"),
-            "total_clicks": data.get("total_clicks"),
-            "idle_time": data.get("idle_time")
-        })
+            "misclick_rate": misclick_rate,
+            "task_completion_time": task_completion_time,
+            "total_clicks": total_clicks,
+            "idle_time": idle_time
+        }
+        
+        logger.info(f"Payload to log: {usability_payload}")
+        log_usability(usability_payload)
 
         # -------------------------------------------------
         # RESPONSE
