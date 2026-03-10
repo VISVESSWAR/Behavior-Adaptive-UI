@@ -127,8 +127,7 @@ export function computeUXMetrics(metrics) {
   // Safe division: avoid division by zero
   const totalClicks = metrics.num_clicks ?? 0;
   const wrongClicks = metrics.wrong_clicks ?? 0;
-  const misclickRate =
-    totalClicks > 0 ? wrongClicks / totalClicks : 0;
+  const misclickRate = totalClicks > 0 ? wrongClicks / totalClicks : 0;
 
   return {
     misclick_rate: misclickRate,
@@ -158,16 +157,17 @@ export async function getDQNAction(stateVector, metrics, flowId, stepId) {
       user_id: localStorage.getItem("user_id") || "user_demo",
       session_id: SESSION_ID,
       task_id: buildTaskId(flowId, stepId),
-      task_start_time: localStorage.getItem("task_start_time") || "unknown",
+      task_start_time:
+        // this.transactionStatus.startTime ||
+        localStorage.getItem("task_start_time") ||
+        Date.now(),
 
-      adaptive_enabled:
-        localStorage.getItem("adaptive_enabled") === "true",
+      adaptive_enabled: localStorage.getItem("adaptive_enabled") === "true",
 
       state: stateVector,
 
       misclick_rate: metrics?.misclick_rate ?? 0,
-      task_completion_time:
-        metrics?.task_completion_time ?? 0,
+      task_completion_time: metrics?.task_completion_time ?? 0,
       total_clicks: metrics?.total_clicks ?? 0,
       idle_time: metrics?.idle_time ?? 0,
     };

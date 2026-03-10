@@ -1210,23 +1210,25 @@ export class MetricsCollector {
 }
 
 export function computeUXMetrics(metrics) {
-  const wrongClicks = metrics.wrong_clicks || 0;
-  const clicks = metrics.num_clicks || 1;
+  if (!metrics) {
+    return {
+      misclick_rate: 0,
+      task_completion_time: 0,
+      total_clicks: 0,
+      idle_time: 0,
+    };
+  }
 
-  const misclick_rate = wrongClicks / clicks;
+  const clicks = metrics.s_num_clicks ?? 0;
+  const wrongClicks = metrics.wrong_clicks ?? 0;
 
-  const task_completion_time =
-    Date.now() - (metrics.task_start_time || Date.now());
-
-  const total_clicks = clicks;
-
-  const idle_time = metrics.idle_time || 0;
+  const misclick_rate = clicks > 0 ? wrongClicks / clicks : 0;
 
   return {
     misclick_rate,
-    task_completion_time,
-    total_clicks,
-    idle_time,
+    task_completion_time: metrics.taskDuration ?? 0,
+    total_clicks: clicks,
+    idle_time: metrics.idle_time ?? 0,
   };
 }
 // INTEGRATION: new MetricsCollector("session_123", "transaction", "confirm"); updateMetrics/Persona via useEffect hooks; collectSnapshot every 10s; export CSV on flow complete

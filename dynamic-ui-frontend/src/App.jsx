@@ -202,12 +202,10 @@ function AppContent() {
 
           {/* Adaptation Debugger */}
           <AdaptationDebugger />
-
-          {/* Adaptive Demo Controls - Developer-only UI simulation panel */}
+{/* 
           <AdaptiveDemoControls />
 
-          {/* Adaptive Decision Panel - Shows current model decision */}
-          <AdaptiveDecisionPanel />
+          <AdaptiveDecisionPanel /> */}
 
       <main>
         <Routes>
